@@ -1,0 +1,110 @@
+import { pgTable, serial, text, integer, jsonb, timestamp, varchar, boolean } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+
+export const deals = pgTable('deals', {
+  id: serial('id').primaryKey(),
+  seekerName: varchar('seeker_name', { length: 255 }).notNull(),
+  seekerEmail: varchar('seeker_email', { length: 255 }).notNull(),
+  companyName: varchar('company_name', { length: 255 }).notNull(),
+  teamSize: integer('team_size').notNull(),
+  monthlyBudget: integer('monthly_budget').notNull(),
+  requirements: jsonb('requirements').notNull().$type<{
+    dogFriendly?: boolean;
+    parking?: boolean;
+    afterHours?: boolean;
+    location?: string;
+  }>(),
+  stage: varchar('stage', { length: 50 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const spaces = pgTable('spaces', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  address: text('address').notNull(),
+  neighborhood: varchar('neighborhood', { length: 100 }),
+  hostCompany: varchar('host_company', { length: 255 }).notNull(),
+  hostEmail: varchar('host_email', { length: 255 }).notNull(),
+  hostContext: text('host_context'),
+  amenities: jsonb('amenities').notNull().$type<{
+    parking?: boolean;
+    dogFriendly?: boolean;
+    afterHours?: boolean;
+    [key: string]: boolean | undefined;
+  }>(),
+  availability: jsonb('availability').notNull().$type<{
+    tuesday?: string[];
+    wednesday?: string[];
+    [key: string]: string[] | undefined;
+  }>(),
+  monthlyRate: integer('monthly_rate').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const emails = pgTable('emails', {
+  id: serial('id').primaryKey(),
+  dealId: integer('deal_id').references(() => deals.id).notNull(),
+  from: varchar('from', { length: 255 }).notNull(),
+  to: varchar('to', { length: 255 }).notNull(),
+  subject: text('subject').notNull(),
+  body: text('body').notNull(),
+  sentAt: timestamp('sent_at').defaultNow().notNull(),
+  aiGenerated: boolean('ai_generated').default(false),
+  aiMetadata: jsonb('ai_metadata').$type<{
+    confidence?: number;
+    reasoning?: {
+      schedulingLogic?: string[];
+      dataLookups?: Array<{
+        question: string;
+        source: string;
+        answer: string;
+      }>;
+      needsHumanReview?: string[];
+    };
+    suggestedActions?: string[];
+    timeSaved?: {
+      traditional: number;
+      withAI: number;
+    };
+  }>(),
+});
+
+export const dealSpaces = pgTable('deal_spaces', {
+  id: serial('id').primaryKey(),
+  dealId: integer('deal_id').references(() => deals.id).notNull(),
+  spaceId: integer('space_id').references(() => spaces.id).notNull(),
+  status: varchar('status', { length: 50 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const dealsRelations = relations(deals, ({ many }) => ({
+  emails: many(emails),
+  dealSpaces: many(dealSpaces),
+}));
+
+export const emailsRelations = relations(emails, ({ one }) => ({
+  deal: one(deals, {
+    fields: [emails.dealId],
+    references: [deals.id],
+  }),
+}));
+
+export const spacesRelations = relations(spaces, ({ many }) => ({
+  dealSpaces: many(dealSpaces),
+}));
+
+export const dealSpacesRelations = relations(dealSpaces, ({ one }) => ({
+  deal: one(deals, {
+    fields: [dealSpaces.dealId],
+    references: [deals.id],
+  }),
+  space: one(spaces, {
+    fields: [dealSpaces.spaceId],
+    references: [spaces.id],
+  }),
+}));
+
+export type Deal = typeof deals.$inferSelect;
+export type Space = typeof spaces.$inferSelect;
+export type Email = typeof emails.$inferSelect;
+export type DealSpace = typeof dealSpaces.$inferSelect;
