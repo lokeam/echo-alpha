@@ -53,48 +53,51 @@ export const dealRouter = router({
       dealId: z.number(),
       inboundEmailId: z.number(),
     }))
-    .mutation(async ({ input }) => {
-      return {
-        body: `Hi Sarah,\n\nGreat questions! Let me address each one:\n\n**Parking at FiDi Office:** Yes, TechCorp has parking available in their building garage.\n\n**SOMA After-Hours Access:** Yes, DesignStudio offers 24/7 access with your key card.\n\n**CloudScale Connection:** CloudScale is a YC W21 company building AI infrastructure - very similar stage to Acme AI! Happy to introduce you to their team.\n\n**Tour Schedule:**\nBased on your CEO's availability (Tuesday 2-4pm), I can arrange:\n- 2:00pm - FiDi Office (123 Market St)\n- 3:00pm - Mission District Hub (789 Valencia St) - only 15 min away!\n\nFor SOMA Creative Space, they don't have Tuesday afternoon availability. Could we do Wednesday 11am for that one with your CEO?\n\nLet me know if this works!\n\nBest,\nAlex`,
-        confidence: 85,
-        reasoning: {
-          schedulingLogic: [
-            'CEO available Tuesday 2-4pm or Wednesday 11am-12pm',
-            'FiDi has Tuesday 2pm slot - scheduled first',
-            'Mission has Tuesday 3pm slot - scheduled second (15 min from FiDi)',
-            'SOMA has no Tuesday afternoon availability - proposed Wednesday 11am alternative',
-          ],
-          dataLookups: [
-            {
-              question: 'Does FiDi office have parking?',
-              source: 'spaces.amenities.parking',
-              answer: 'Yes, parking available',
-            },
-            {
-              question: 'Can we access SOMA space after hours?',
-              source: 'spaces.amenities.afterHours',
-              answer: 'Yes, 24/7 access included',
-            },
-            {
-              question: "What's the story with CloudScale?",
-              source: 'spaces.hostContext',
-              answer: 'YC W21 AI infrastructure startup, similar stage to Acme AI',
-            },
-          ],
-          needsHumanReview: [
-            'SOMA space requires Wednesday slot - confirm this works for CEO',
-            'Consider if 2 tours in one day is too much, or if they prefer all 3 on different days',
-          ],
-        },
-        suggestedActions: [
-          'Send calendar invites once confirmed',
-          'Introduce Sarah to CloudScale team',
-          'Prepare tour briefing docs for each space',
-        ],
-        timeSaved: {
-          traditional: 45,
-          withAI: 3,
-        },
-      };
+    .mutation(async ({ ctx, input }) => {
+      const { generateEmailDraft } = await import('../services/emailGenerator');
+      const { pool } = await import('../../db/index');
+
+      // Fetch deal
+      const dealResult = await ctx.db.query.deals.findFirst({
+        where: eq(deals.id, input.dealId),
+      });
+
+      if (!dealResult) {
+        throw new Error('Deal not found');
+      }
+
+      // Fetch spaces associated with this deal
+      const spacesResult = await pool.query(
+        `SELECT s.* FROM spaces s
+         INNER JOIN deal_spaces ds ON s.id = ds.space_id
+         WHERE ds.deal_id = $1`,
+        [input.dealId]
+      );
+
+      // Fetch email thread
+      const emailThreadResult = await pool.query(
+        'SELECT * FROM emails WHERE deal_id = $1 ORDER BY sent_at ASC',
+        [input.dealId]
+      );
+
+      // Fetch the specific inbound email
+      const inboundEmailResult = await pool.query(
+        'SELECT * FROM emails WHERE id = $1',
+        [input.inboundEmailId]
+      );
+
+      if (inboundEmailResult.rows.length === 0) {
+        throw new Error('Inbound email not found');
+      }
+
+      // Generate AI draft
+      const draft = await generateEmailDraft({
+        deal: dealResult,
+        spaces: spacesResult.rows,
+        emailThread: emailThreadResult.rows,
+        inboundEmail: inboundEmailResult.rows[0],
+      });
+
+      return draft;
     }),
 });
