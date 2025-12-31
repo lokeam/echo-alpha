@@ -8,6 +8,13 @@
       "when": 1767119492303,
       "tag": "0000_clear_sleepwalker",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1767205194362,
+      "tag": "0001_solid_rogue",
+      "breakpoints": true
     }
   ]
 }

@@ -77,6 +77,32 @@ export const dealSpaces = pgTable('deal_spaces', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const emailDrafts = pgTable('email_drafts', {
+  id: serial('id').primaryKey(),
+  dealId: integer('deal_id').references(() => deals.id).notNull(),
+  inboundEmailId: integer('inbound_email_id').references(() => emails.id).notNull(),
+  aiGeneratedBody: text('ai_generated_body').notNull(),
+  editedBody: text('edited_body'),
+  finalBody: text('final_body'),
+  confidenceScore: integer('confidence_score').notNull(),
+  status: varchar('status', { length: 50 }).notNull().default('pending'),
+  reasoning: jsonb('reasoning').$type<{
+    questionsAddressed: string[];
+    dataUsed: string[];
+    schedulingLogic?: string[];
+  }>(),
+  metadata: jsonb('metadata').$type<{
+    model: string;
+    tokensUsed: number;
+    generatedAt: Date;
+  }>(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  reviewedAt: timestamp('reviewed_at'),
+  reviewedBy: varchar('reviewed_by', { length: 255 }),
+  sentAt: timestamp('sent_at'),
+  sentEmailId: integer('sent_email_id').references(() => emails.id),
+});
+
 export const dealsRelations = relations(deals, ({ many }) => ({
   emails: many(emails),
   dealSpaces: many(dealSpaces),
@@ -104,7 +130,23 @@ export const dealSpacesRelations = relations(dealSpaces, ({ one }) => ({
   }),
 }));
 
+export const emailDraftsRelations = relations(emailDrafts, ({ one }) => ({
+  deal: one(deals, {
+    fields: [emailDrafts.dealId],
+    references: [deals.id],
+  }),
+  inboundEmail: one(emails, {
+    fields: [emailDrafts.inboundEmailId],
+    references: [emails.id],
+  }),
+  sentEmail: one(emails, {
+    fields: [emailDrafts.sentEmailId],
+    references: [emails.id],
+  }),
+}));
+
 export type Deal = typeof deals.$inferSelect;
 export type Space = typeof spaces.$inferSelect;
 export type Email = typeof emails.$inferSelect;
 export type DealSpace = typeof dealSpaces.$inferSelect;
+export type EmailDraft = typeof emailDrafts.$inferSelect;
