@@ -1,9 +1,13 @@
 'use client';
 
 import { trpc } from '../../lib/trpc';
+import { EmailDraftGenerator } from './components/EmailDraftGenerator';
 
 export default function DemoPage() {
   const { data: emailThread, isLoading, error } = trpc.deal.getEmailThread.useQuery({ dealId: 1 });
+
+  // Get the latest inbound email (from Sarah)
+  const latestInboundEmail = emailThread?.find(email => email.from === 'sarah@acme-ai.com');
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -67,7 +71,7 @@ export default function DemoPage() {
                       <strong>From:</strong> {email.from} → <strong>To:</strong> {email.to}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {new Date(email.sentAt).toLocaleString()}
+                      {new Date(email.sent_at).toLocaleString()}
                     </div>
                   </div>
                   <div className="text-sm font-semibold mb-2">{email.subject}</div>
@@ -80,17 +84,26 @@ export default function DemoPage() {
           )}
         </div>
 
+        {/* AI Email Draft Generator */}
+        {latestInboundEmail && (
+          <EmailDraftGenerator
+            dealId={1}
+            inboundEmailId={latestInboundEmail.id}
+          />
+        )}
+
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h3 className="font-semibold text-green-900 mb-2">Setup checklist (pre AI integration)</h3>
+          <h3 className="font-semibold text-green-900 mb-2">🎉 Full Stack Complete</h3>
           <ul className="space-y-1 text-sm text-green-800">
             <li>• ✅ Full stack working end-to-end</li>
-            <li>• ✅ Database connection fixed (switched to Supabase)</li>
+            <li>• ✅ Database connection (Supabase local)</li>
             <li>• ✅ tRPC queries working from frontend</li>
             <li>• ✅ Real data displaying above</li>
-            <li>• ✅ Production-like setup (Supabase local)</li>
+            <li>• ✅ Production-like setup</li>
+            <li>• ✅ <strong>AI email generation with OpenAI GPT-4o-mini</strong></li>
           </ul>
           <p className="text-sm text-green-800 mt-3">
-            <strong>TODO:</strong> Build AI email generation with OpenAI GPT-4o-mini
+            <strong>Status:</strong> Ready for production deployment
           </p>
         </div>
       </div>
