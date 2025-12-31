@@ -87,8 +87,19 @@ export const emailDrafts = pgTable('email_drafts', {
   confidenceScore: integer('confidence_score').notNull(),
   status: varchar('status', { length: 50 }).notNull().default('pending'),
   reasoning: jsonb('reasoning').$type<{
-    questionsAddressed: string[];
-    dataUsed: string[];
+    questionsAddressed: Array<{
+      question: string;
+      answer: string;
+      sourceEmailId?: number;
+      sourceText?: string;
+    }>;
+    dataUsed: Array<{
+      dataPoint: string;
+      sourceType?: 'space' | 'deal' | 'email';
+      sourceId?: number;
+      fieldPath?: string;
+      value?: any;
+    }>;
     schedulingLogic?: string[];
   }>(),
   metadata: jsonb('metadata').$type<{
@@ -96,6 +107,36 @@ export const emailDrafts = pgTable('email_drafts', {
     tokensUsed: number;
     generatedAt: Date;
   }>(),
+  regenerationCount: integer('regeneration_count').notNull().default(0),
+  currentVersion: integer('current_version').notNull().default(0),
+  draftVersions: jsonb('draft_versions').$type<Array<{
+    version: number;
+    body: string;
+    prompt: string | null;
+    confidence: number;
+    reasoning: {
+      questionsAddressed: Array<{
+        question: string;
+        answer: string;
+        sourceEmailId?: number;
+        sourceText?: string;
+      }>;
+      dataUsed: Array<{
+        dataPoint: string;
+        sourceType?: 'space' | 'deal' | 'email';
+        sourceId?: number;
+        fieldPath?: string;
+        value?: any;
+      }>;
+      schedulingLogic?: string[];
+    };
+    metadata: {
+      model: string;
+      tokensUsed: number;
+      generatedAt: Date;
+    };
+    createdAt: Date;
+  }>>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   reviewedAt: timestamp('reviewed_at'),
   reviewedBy: varchar('reviewed_by', { length: 255 }),

@@ -21,6 +21,7 @@ export interface StructuredContext {
     };
   };
   spaces: Array<{
+    id: number;
     name: string;
     address: string;
     neighborhood: string | null;
@@ -73,6 +74,7 @@ export function buildStructuredContext(context: EmailContext): StructuredContext
       },
     },
     spaces: context.spaces.map(space => ({
+      id: space.id,
       name: space.name,
       address: space.address,
       neighborhood: space.neighborhood,

@@ -11,6 +11,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { DraftVersionHistory } from './components/DraftVersionHistory';
+import { RegenerateDraftModal } from './components/RegenerateDraftModal';
+import { EnhancedAIInsights } from './components/EnhancedAIInsights';
 
 export default function DraftDetailPage() {
   const params = useParams();
@@ -22,8 +25,16 @@ export default function DraftDetailPage() {
   const [hasEdits, setHasEdits] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRegenerateModal, setShowRegenerateModal] = useState(false);
 
-  const { data: draft, isLoading, error } = trpc.draft.getById.useQuery({ draftId });
+  const utils = trpc.useUtils();
+  const { data: draft, isLoading, error, refetch } = trpc.draft.getById.useQuery(
+    { draftId },
+    {
+      refetchOnWindowFocus: false,
+      staleTime: 0,
+    }
+  );
 
   const updateMutation = trpc.draft.update.useMutation({
     onSuccess: () => {
@@ -65,11 +76,37 @@ export default function DraftDetailPage() {
     },
   });
 
+  const regenerateMutation = trpc.draft.regenerate.useMutation({
+    onSuccess: async (result) => {
+      toast.success(`Draft regenerated! (${result.versionsRemaining} refinements remaining)`);
+      // Force complete cache reset
+      await utils.draft.invalidate();
+      // Refetch with fresh data
+      await refetch();
+      // Close modal only after data is updated
+      setShowRegenerateModal(false);
+    },
+    onError: (error) => {
+      toast.error(`Failed to regenerate: ${error.message}`);
+    },
+  });
+
+  const switchVersionMutation = trpc.draft.switchVersion.useMutation({
+    onSuccess: () => {
+      toast.success('Switched to selected version');
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Failed to switch version: ${error.message}`);
+    },
+  });
+
   useEffect(() => {
     if (draft) {
-      setEditedBody(draft.final_body || draft.ai_generated_body);
+      const currentBody = draft.final_body || draft.ai_generated_body;
+      setEditedBody(currentBody);
     }
-  }, [draft]);
+  }, [draft?.final_body, draft?.ai_generated_body, draft?.id]);
 
   useEffect(() => {
     if (draft && editedBody !== (draft.final_body || draft.ai_generated_body)) {
@@ -110,6 +147,20 @@ export default function DraftDetailPage() {
 
   const handleReject = () => {
     rejectMutation.mutate({ draftId });
+  };
+
+  const handleRegenerate = (instruction: string) => {
+    regenerateMutation.mutate({
+      draftId,
+      userInstruction: instruction,
+    });
+  };
+
+  const handleSwitchVersion = (targetVersion: number) => {
+    switchVersionMutation.mutate({
+      draftId,
+      targetVersion,
+    });
   };
 
   const getConfidenceBadge = (score: number) => {
@@ -205,61 +256,54 @@ export default function DraftDetailPage() {
             </CardContent>
           </Card>
 
-          {/* AI Insights */}
-          <Card className="border-blue-200 bg-blue-50">
-            <CardHeader>
-              <CardTitle>AI Insights</CardTitle>
-              <CardDescription>How the AI generated this response</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {draft.reasoning && (
-                <div className="space-y-4">
-                  {draft.reasoning.questionsAddressed && draft.reasoning.questionsAddressed.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-blue-900 mb-2">Questions Addressed:</h4>
-                      <ul className="space-y-1 text-sm text-blue-800">
-                        {draft.reasoning.questionsAddressed.map((q: string, i: number) => (
-                          <li key={i}>✓ {q}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+          {/* Version History */}
+          {draft.draftVersions && draft.draftVersions.length > 0 && (
+            <DraftVersionHistory
+              versions={draft.draftVersions}
+              currentVersion={draft.currentVersion || 0}
+              regenerationCount={draft.regenerationCount || 0}
+              onSwitchVersion={handleSwitchVersion}
+              isLoading={switchVersionMutation.isPending}
+            />
+          )}
 
-                  {draft.reasoning.dataUsed && draft.reasoning.dataUsed.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-blue-900 mb-2">Data Sources Used:</h4>
-                      <ul className="space-y-1 text-sm text-blue-800">
-                        {draft.reasoning.dataUsed.map((d: string, i: number) => (
-                          <li key={i}>• {d}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+          {/* Enhanced AI Insights */}
+          {draft.reasoning && (
+            <EnhancedAIInsights
+              reasoning={draft.reasoning}
+              version={draft.currentVersion || 0}
+              confidence={draft.confidenceScore}
+            />
+          )}
 
-                  {draft.reasoning.schedulingLogic && draft.reasoning.schedulingLogic.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-blue-900 mb-2">Scheduling Logic:</h4>
-                      <ul className="space-y-1 text-sm text-blue-800">
-                        {draft.reasoning.schedulingLogic.map((s: string, i: number) => (
-                          <li key={i}>→ {s}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {draft.metadata && (
-                <div className="mt-4 pt-4 border-t border-blue-200">
-                  <div className="text-xs text-blue-700 flex gap-4">
-                    <span>Model: {draft.metadata.model}</span>
-                    <span>Tokens: {draft.metadata.tokensUsed}</span>
-                    <span>Generated: {new Date(draft.metadata.generatedAt).toLocaleString()}</span>
+          {/* Regenerate Button */}
+          {draft.status !== 'sent' && draft.status !== 'rejected' && (
+            <Card className="border-purple-200 bg-purple-50">
+              <CardContent className="pt-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="font-semibold text-purple-900 mb-1">
+                      ✨ Refine with AI
+                    </h3>
+                    <p className="text-sm text-purple-700">
+                      Guide the AI to improve this draft with specific instructions
+                    </p>
                   </div>
+                  <Button
+                    onClick={() => setShowRegenerateModal(true)}
+                    disabled={draft.regenerationCount >= 3 || regenerateMutation.isPending}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    {(draft.regenerationCount || 0) >= 3 ? (
+                      'Max Refinements Reached'
+                    ) : (
+                      `✨ Refine Draft (${3 - (draft.regenerationCount || 0)} left)`
+                    )}
+                  </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Action Buttons */}
           {draft.status === 'pending' && (
@@ -375,6 +419,15 @@ export default function DraftDetailPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Regenerate Draft Modal */}
+        <RegenerateDraftModal
+          open={showRegenerateModal}
+          onOpenChange={setShowRegenerateModal}
+          onRegenerate={handleRegenerate}
+          versionsRemaining={3 - (draft.regenerationCount || 0)}
+          isLoading={regenerateMutation.isPending}
+        />
       </div>
     </div>
   );

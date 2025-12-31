@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { router, publicProcedure } from '../trpc';
 import { emailDrafts, emails, deals } from '../../db/schema';
 import { eq } from 'drizzle-orm';
-import { generateEmailDraft } from '../services/emailGenerator';
+import { generateEmailDraft, regenerateEmailDraft } from '../services/emailGenerator';
 import { sendEmail } from '../services/emailSender';
 
 export const draftRouter = router({
@@ -58,6 +58,17 @@ export const draftRouter = router({
         inboundEmail: inboundEmailResult.rows[0],
       });
 
+      // Initialize version history with v0
+      const initialVersion = {
+        version: 0,
+        body: aiDraft.body,
+        prompt: null,
+        confidence: aiDraft.confidence,
+        reasoning: aiDraft.reasoning,
+        metadata: aiDraft.metadata,
+        createdAt: new Date(),
+      };
+
       // Save draft to database
       const [savedDraft] = await ctx.db.insert(emailDrafts).values({
         dealId: input.dealId,
@@ -68,6 +79,9 @@ export const draftRouter = router({
         status: 'pending',
         reasoning: aiDraft.reasoning,
         metadata: aiDraft.metadata,
+        regenerationCount: 0,
+        currentVersion: 0,
+        draftVersions: [initialVersion],
       }).returning();
 
       return savedDraft;
@@ -156,7 +170,32 @@ export const draftRouter = router({
         throw new Error('Draft not found');
       }
 
-      return result.rows[0];
+      const row = result.rows[0];
+
+      // Transform snake_case to camelCase for frontend
+      return {
+        ...row,
+        regenerationCount: row.regeneration_count,
+        currentVersion: row.current_version,
+        draftVersions: row.draft_versions,
+        aiGeneratedBody: row.ai_generated_body,
+        finalBody: row.final_body,
+        confidenceScore: row.confidence_score,
+        dealId: row.deal_id,
+        inboundEmailId: row.inbound_email_id,
+        createdAt: row.created_at,
+        reviewedAt: row.reviewed_at,
+        reviewedBy: row.reviewed_by,
+        sentAt: row.sent_at,
+        companyName: row.company_name,
+        seekerName: row.seeker_name,
+        seekerEmail: row.seeker_email,
+        inboundFrom: row.inbound_from,
+        inboundTo: row.inbound_to,
+        inboundSubject: row.inbound_subject,
+        inboundBody: row.inbound_body,
+        inboundSentAt: row.inbound_sent_at,
+      };
     }),
 
   /**
@@ -345,6 +384,150 @@ export const draftRouter = router({
           status: newStatus,
           reviewedAt: newStatus === 'rejected' ? new Date() : null,
           reviewedBy: newStatus === 'rejected' ? 'Jenny' : null,
+        })
+        .where(eq(emailDrafts.id, input.draftId))
+        .returning();
+
+      return updated;
+    }),
+
+  /**
+   * Regenerate draft with additional user instructions (max 3 times)
+   */
+  regenerate: publicProcedure
+    .input(z.object({
+      draftId: z.number().positive(),
+      userInstruction: z.string().min(10).max(500),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { pool } = await import('../../db/index');
+
+      const existing = await ctx.db.query.emailDrafts.findFirst({
+        where: eq(emailDrafts.id, input.draftId),
+      });
+
+      if (!existing) {
+        throw new Error('Draft not found');
+      }
+
+      if (existing.regenerationCount >= 3) {
+        throw new Error('Maximum regeneration limit (3) reached. You can still manually edit the draft.');
+      }
+
+      if (existing.status === 'sent') {
+        throw new Error('Cannot regenerate a draft that has already been sent');
+      }
+
+      const dealResult = await ctx.db.query.deals.findFirst({
+        where: eq(deals.id, existing.dealId),
+      });
+
+      if (!dealResult) {
+        throw new Error('Deal not found');
+      }
+
+      const spacesResult = await pool.query(
+        `SELECT s.* FROM spaces s
+         INNER JOIN deal_spaces ds ON s.id = ds.space_id
+         WHERE ds.deal_id = $1`,
+        [existing.dealId]
+      );
+
+      const emailThreadResult = await pool.query(
+        'SELECT * FROM emails WHERE deal_id = $1 ORDER BY sent_at ASC',
+        [existing.dealId]
+      );
+
+      const inboundEmailResult = await pool.query(
+        'SELECT * FROM emails WHERE id = $1',
+        [existing.inboundEmailId]
+      );
+
+      if (inboundEmailResult.rows.length === 0) {
+        throw new Error('Inbound email not found');
+      }
+
+      const currentVersionBody = existing.finalBody || existing.aiGeneratedBody;
+      const nextVersionNumber = existing.regenerationCount + 1;
+
+      const newDraft = await regenerateEmailDraft(
+        {
+          deal: dealResult,
+          spaces: spacesResult.rows,
+          emailThread: emailThreadResult.rows,
+          inboundEmail: inboundEmailResult.rows[0],
+        },
+        currentVersionBody,
+        input.userInstruction,
+        nextVersionNumber
+      );
+
+      const newVersion = {
+        version: nextVersionNumber,
+        body: newDraft.body,
+        prompt: input.userInstruction,
+        confidence: newDraft.confidence,
+        reasoning: newDraft.reasoning,
+        metadata: newDraft.metadata,
+        createdAt: new Date(),
+      };
+
+      const existingVersions = existing.draftVersions || [];
+      const updatedVersions = [...existingVersions, newVersion];
+
+      const [updated] = await ctx.db
+        .update(emailDrafts)
+        .set({
+          regenerationCount: existing.regenerationCount + 1,
+          currentVersion: nextVersionNumber,
+          draftVersions: updatedVersions,
+          finalBody: newDraft.body,
+          confidenceScore: newDraft.confidence,
+          reasoning: newDraft.reasoning,
+          metadata: newDraft.metadata,
+        })
+        .where(eq(emailDrafts.id, input.draftId))
+        .returning();
+
+      return {
+        draft: updated,
+        newVersion,
+        versionsRemaining: 3 - updated.regenerationCount,
+      };
+    }),
+
+  /**
+   * Switch to a different version from history
+   */
+  switchVersion: publicProcedure
+    .input(z.object({
+      draftId: z.number().positive(),
+      targetVersion: z.number().min(0).max(3),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.query.emailDrafts.findFirst({
+        where: eq(emailDrafts.id, input.draftId),
+      });
+
+      if (!existing) {
+        throw new Error('Draft not found');
+      }
+
+      const versions = existing.draftVersions || [];
+      const targetVersionData = versions.find(v => v.version === input.targetVersion);
+
+      if (!targetVersionData) {
+        throw new Error(`Version ${input.targetVersion} not found`);
+      }
+
+      const [updated] = await ctx.db
+        .update(emailDrafts)
+        .set({
+          currentVersion: input.targetVersion,
+          finalBody: targetVersionData.body,
+          confidenceScore: targetVersionData.confidence,
+          reasoning: targetVersionData.reasoning,
+          metadata: targetVersionData.metadata,
         })
         .where(eq(emailDrafts.id, input.draftId))
         .returning();
