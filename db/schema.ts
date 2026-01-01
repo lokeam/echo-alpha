@@ -38,6 +38,53 @@ export const spaces = pgTable('spaces', {
     [key: string]: string[] | undefined;
   }>(),
   monthlyRate: integer('monthly_rate').notNull(),
+  detailedAmenities: jsonb('detailed_amenities').$type<{
+    parking?: {
+      type?: string;
+      location?: string;
+      costMonthly?: number;
+      costPerDay?: number;
+      spotsAvailable?: number;
+      provider?: string;
+      sharedSpots?: boolean;
+      note?: string;
+    };
+    dogPolicy?: {
+      allowed: boolean;
+      reason?: string;
+      flexibility?: string;
+      alternative?: string;
+      sizeLimit?: string;
+      deposit?: number;
+      note?: string;
+    };
+    access?: {
+      system?: string;
+      costPerCard?: number;
+      cost?: number;
+      process?: string;
+      hours?: string;
+      afterHours?: boolean;
+      advanceNotice?: string;
+      securityContact?: string;
+    };
+    meetingRooms?: {
+      count: number;
+      sizes: number[];
+      bookingSystem?: string;
+      maxHoursPerBooking?: number;
+      note?: string;
+    };
+    rentInclusions?: {
+      utilities?: boolean;
+      internet?: string;
+      janitorial?: string;
+      hvac?: boolean;
+      kitchen?: string;
+    };
+    hostStatus?: string;
+    lastContact?: string;
+  }>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -108,6 +155,7 @@ export const emailDrafts = pgTable('email_drafts', {
     generatedAt: Date;
   }>(),
   regenerationCount: integer('regeneration_count').notNull().default(0),
+  lastRegenerationAt: timestamp('last_regeneration_at'),
   currentVersion: integer('current_version').notNull().default(0),
   draftVersions: jsonb('draft_versions').$type<Array<{
     version: number;
