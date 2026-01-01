@@ -26,6 +26,7 @@ export default function DraftDetailPage() {
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRegenerateModal, setShowRegenerateModal] = useState(false);
+  const [cooldownHours, setCooldownHours] = useState<number | null>(null);
 
   const utils = trpc.useUtils();
   const { data: draft, isLoading, error, refetch } = trpc.draft.getById.useQuery(
@@ -79,6 +80,7 @@ export default function DraftDetailPage() {
   const regenerateMutation = trpc.draft.regenerate.useMutation({
     onSuccess: async (result) => {
       toast.success(`Draft regenerated! (${result.versionsRemaining} refinements remaining)`);
+      setCooldownHours(null);
       // Force complete cache reset
       await utils.draft.invalidate();
       // Refetch with fresh data
@@ -87,7 +89,14 @@ export default function DraftDetailPage() {
       setShowRegenerateModal(false);
     },
     onError: (error) => {
-      toast.error(`Failed to regenerate: ${error.message}`);
+      const message = error.message;
+      if (message.startsWith('COOLDOWN:')) {
+        const hours = parseInt(message.split(':')[1]);
+        setCooldownHours(hours);
+        toast.error(`Refinement limit reached. Please wait ${hours} hours or upgrade your plan.`);
+      } else {
+        toast.error(`Failed to regenerate: ${message}`);
+      }
     },
   });
 
@@ -278,29 +287,55 @@ export default function DraftDetailPage() {
 
           {/* Regenerate Button */}
           {draft.status !== 'sent' && draft.status !== 'rejected' && (
-            <Card className="border-purple-200 bg-purple-50">
+            <Card className={cooldownHours ? "border-orange-200 bg-orange-50" : "border-purple-200 bg-purple-50"}>
               <CardContent className="pt-6">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-semibold text-purple-900 mb-1">
-                      ✨ Refine with AI
-                    </h3>
-                    <p className="text-sm text-purple-700">
-                      Guide the AI to improve this draft with specific instructions
-                    </p>
+                {cooldownHours ? (
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-orange-900 mb-2">
+                        ⏱️ Refinement Cooldown Active
+                      </h3>
+                      <p className="text-sm text-orange-700 mb-3">
+                        You&apos;ve used all 3 free refinements for this email. You can refine again in <strong>{cooldownHours} hours</strong>, or upgrade for unlimited refinements.
+                      </p>
+                      <div className="bg-white border border-orange-200 rounded-lg p-4 mb-4">
+                        <p className="text-sm text-gray-700 mb-3">
+                          <strong>Interested in more refinements per email?</strong> Upgrade to a Professional or Enterprise account for unlimited AI refinements with no cooldown periods.
+                        </p>
+                        <Link href="/pricing">
+                          <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                            View Pricing Plans →
+                          </Button>
+                        </Link>
+                      </div>
+                      <p className="text-xs text-orange-600">
+                        💡 You can still manually edit this draft while waiting
+                      </p>
+                    </div>
                   </div>
-                  <Button
-                    onClick={() => setShowRegenerateModal(true)}
-                    disabled={draft.regenerationCount >= 3 || regenerateMutation.isPending}
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
-                    {(draft.regenerationCount || 0) >= 3 ? (
-                      'Max Refinements Reached'
-                    ) : (
-                      `✨ Refine Draft (${3 - (draft.regenerationCount || 0)} left)`
-                    )}
-                  </Button>
-                </div>
+                ) : (
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-semibold text-purple-900 mb-1">
+                        ✨ Refine with AI
+                      </h3>
+                      <p className="text-sm text-purple-700">
+                        Guide the AI to improve this draft with specific instructions
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => setShowRegenerateModal(true)}
+                      disabled={draft.regenerationCount >= 3 || regenerateMutation.isPending}
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      {(draft.regenerationCount || 0) >= 3 ? (
+                        'Max Refinements Reached'
+                      ) : (
+                        `✨ Refine Draft (${3 - (draft.regenerationCount || 0)} left)`
+                      )}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
