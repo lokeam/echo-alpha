@@ -1,112 +1,247 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { trpc } from '../../lib/trpc';
-import { EmailDraftGenerator } from './components/EmailDraftGenerator';
+import { EmailThreadItem } from './components/EmailThreadItem';
+import { AIStatusIndicator, AIStatus } from './components/AIStatusIndicator';
+import { StreamingDraft } from './components/StreamingDraft';
+import { AIReasoningDrawer } from './components/AIReasoningDrawer';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent } from '../../components/ui/card';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import Link from 'next/link';
+
+type GenerationState = 'idle' | 'generating' | 'streaming' | 'complete';
 
 export default function DemoPage() {
+  const router = useRouter();
+  const [expandedEmailIds, setExpandedEmailIds] = useState<Set<number>>(new Set());
+  const [generationState, setGenerationState] = useState<GenerationState>('idle');
+  const [currentStatus, setCurrentStatus] = useState<AIStatus>('reading_thread');
+  const [generatedDraft, setGeneratedDraft] = useState<string>('');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [draftReasoning, setDraftReasoning] = useState<{
+    questionsAddressed?: Array<{ question: string; answer: string }>;
+    dataUsed?: Array<any>;
+    crmLookups?: Array<any>;
+    calendarChecks?: Array<any>;
+    tourRoute?: any;
+  } | null>(null);
+
   const { data: emailThread, isLoading, error } = trpc.deal.getEmailThread.useQuery({ dealId: 1 });
 
-  // Get the latest inbound email (from Sarah)
-  const latestInboundEmail = emailThread?.find(email => email.from === 'sarah@acme-ai.com');
+  useEffect(() => {
+    if (emailThread && emailThread.length > 0 && expandedEmailIds.size === 0) {
+      const mostRecentEmail = emailThread.reduce((latest, email) => {
+        return new Date(email.sent_at) > new Date(latest.sent_at) ? email : latest;
+      });
+      setExpandedEmailIds(new Set([mostRecentEmail.id]));
+    }
+  }, [emailThread, expandedEmailIds.size]);
+
+  const createDraftMutation = trpc.draft.create.useMutation({
+    onSuccess: (draft) => {
+      setGeneratedDraft(draft.aiGeneratedBody);
+      setDraftReasoning(draft.reasoning);
+      setGenerationState('streaming');
+    },
+    onError: (error) => {
+      toast.error(`Failed to generate draft: ${error.message}`);
+      setGenerationState('idle');
+    },
+  });
+
+  const latestInboundEmail = emailThread
+    ?.filter(email => email.from === 'sarah@acme-ai.com')
+    .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())[0];
+
+  const handleGenerateDraft = () => {
+    if (!latestInboundEmail) {
+      toast.error('No inbound email found');
+      return;
+    }
+
+    setGenerationState('generating');
+    simulateStatusProgress();
+
+    createDraftMutation.mutate({
+      dealId: 1,
+      inboundEmailId: latestInboundEmail.id,
+    });
+  };
+
+  const simulateStatusProgress = () => {
+    const statuses: AIStatus[] = [
+      'reading_thread',
+      'identifying_questions',
+      'querying_crm_fidi',
+      'querying_crm_soma',
+      'querying_crm_mission',
+      'checking_availability',
+      'calculating_route',
+      'drafting',
+    ];
+
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      if (currentIndex < statuses.length) {
+        setCurrentStatus(statuses[currentIndex]);
+        currentIndex++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 800);
+  };
+
+  const handleStreamingComplete = () => {
+    setGenerationState('complete');
+  };
+
+  const handleViewReasoning = () => {
+    setDrawerOpen(true);
+  };
+
+  const handleContinueToReview = () => {
+    toast.success('Navigating to draft review...');
+    router.push('/drafts/1');
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">AI Email Assistant Demo</h1>
-
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">✅ Stack Status - FULLY OPERATIONAL</h2>
-
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="text-green-600 font-bold">✓</span>
-              <span>Next.js 16 App Router + TypeScript</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-green-600 font-bold">✓</span>
-              <span>Supabase Local (Postgres 17)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-green-600 font-bold">✓</span>
-              <span>Database Schema (deals, spaces, emails, deal_spaces)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-green-600 font-bold">✓</span>
-              <span>Seed Data (Acme AI: 1 deal, 3 spaces, 2-email thread)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-green-600 font-bold">✓</span>
-              <span>tRPC Routers (4 procedures)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-green-600 font-bold">✓</span>
-              <span>Drizzle ORM + Type-safe schema</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-green-600 font-bold">✓</span>
-              <span className="font-semibold">Database Connection Working!</span>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-10 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/overview">
+                <Button variant="outline" size="sm">
+                  ← Back
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-xl font-semibold text-gray-900">Acme AI - Office Space Inquiry</h1>
+                <p className="text-sm text-gray-600">8-person team, $5k budget, dog-friendly required</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Email Thread - Acme AI Deal</h2>
-
+        {/* Email Thread Container */}
+        <div className="px-6 py-6">
           {isLoading && (
-            <div className="text-gray-500">Loading email thread...</div>
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              <p className="ml-4 text-gray-600">Loading email thread...</p>
+            </div>
           )}
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded p-4 text-red-800">
-              <strong>Error:</strong> {error.message}
-            </div>
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="pt-6">
+                <p className="text-red-800"><strong>Error:</strong> {error.message}</p>
+              </CardContent>
+            </Card>
           )}
 
-          {emailThread && emailThread.length > 0 ? (
-            <div className="space-y-4">
+          {emailThread && emailThread.length > 0 && (
+            <div className="space-y-3">
               {emailThread.map((email) => (
-                <div key={email.id} className="border-l-4 border-blue-500 pl-4 py-3 bg-gray-50 rounded-r">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="text-sm text-gray-600">
-                      <strong>From:</strong> {email.from} → <strong>To:</strong> {email.to}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {new Date(email.sent_at).toLocaleString()}
-                    </div>
-                  </div>
-                  <div className="text-sm font-semibold mb-2">{email.subject}</div>
-                  <div className="text-sm whitespace-pre-wrap text-gray-700">{email.body}</div>
-                </div>
+                <EmailThreadItem
+                  key={email.id}
+                  email={email}
+                  isExpanded={expandedEmailIds.has(email.id)}
+                  onToggle={() => {
+                    setExpandedEmailIds(prev => {
+                      const newSet = new Set(prev);
+                      if (newSet.has(email.id)) {
+                        newSet.delete(email.id);
+                      } else {
+                        newSet.add(email.id);
+                      }
+                      return newSet;
+                    });
+                  }}
+                />
               ))}
             </div>
-          ) : (
-            !isLoading && <p className="text-gray-500">No emails found</p>
+          )}
+
+          {/* Draft Generation Section */}
+          {emailThread && emailThread.length > 0 && generationState === 'idle' && (
+            <Card className="mt-6 border-purple-200 bg-purple-50">
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-purple-900 mb-2">
+                      ✨ AI Draft Generator
+                    </h3>
+                    <p className="text-sm text-purple-700">
+                      Generate an AI-powered response to the latest email in this thread.
+                      The AI will analyze the conversation, deal requirements, and available spaces.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleGenerateDraft}
+                    disabled={createDraftMutation.isPending}
+                    className="w-full bg-purple-600 hover:bg-purple-700"
+                    size="lg"
+                  >
+                    ✨ Generate AI Draft
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* AI Status Indicator */}
+          {generationState === 'generating' && (
+            <div className="mt-6">
+              <AIStatusIndicator currentStatus={currentStatus} />
+            </div>
+          )}
+
+          {/* Streaming Draft */}
+          {(generationState === 'streaming' || generationState === 'complete') && (
+            <div className="mt-6 space-y-4">
+              <StreamingDraft
+                fullText={generatedDraft}
+                onComplete={handleStreamingComplete}
+                onViewReasoning={handleViewReasoning}
+              />
+              {generationState === 'complete' && (
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleViewReasoning}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    🧠 View AI Reasoning
+                  </Button>
+                  <Button
+                    onClick={handleContinueToReview}
+                    className="flex-1 bg-purple-600 hover:bg-purple-700"
+                  >
+                    Continue to Review →
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
         </div>
-
-        {/* AI Email Draft Generator */}
-        {latestInboundEmail && (
-          <EmailDraftGenerator
-            dealId={1}
-            inboundEmailId={latestInboundEmail.id}
-          />
-        )}
-
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h3 className="font-semibold text-green-900 mb-2">🎉 Full Stack Complete</h3>
-          <ul className="space-y-1 text-sm text-green-800">
-            <li>• ✅ Full stack working end-to-end</li>
-            <li>• ✅ Database connection (Supabase local)</li>
-            <li>• ✅ tRPC queries working from frontend</li>
-            <li>• ✅ Real data displaying above</li>
-            <li>• ✅ Production-like setup</li>
-            <li>• ✅ <strong>AI email generation with OpenAI GPT-4o-mini</strong></li>
-          </ul>
-          <p className="text-sm text-green-800 mt-3">
-            <strong>Status:</strong> Ready for production deployment
-          </p>
-        </div>
       </div>
+
+      {/* AI Reasoning Drawer */}
+      {draftReasoning && (
+        <AIReasoningDrawer
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          questionsAddressed={draftReasoning.questionsAddressed?.map((q) => q.question) || []}
+          crmLookups={draftReasoning.crmLookups || []}
+          calendarChecks={draftReasoning.calendarChecks || []}
+          tourRoute={draftReasoning.tourRoute}
+        />
+      )}
     </div>
   );
 }
