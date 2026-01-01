@@ -1,10 +1,11 @@
 import { db } from './index';
-import { deals, spaces, emails, dealSpaces } from './schema';
+import { deals, spaces, emails, dealSpaces, emailDrafts } from './schema';
 
 async function seed() {
   console.log('🌱 Seeding database...');
 
   await db.delete(dealSpaces);
+  await db.delete(emailDrafts);
   await db.delete(emails);
   await db.delete(spaces);
   await db.delete(deals);
@@ -36,7 +37,7 @@ async function seed() {
       hostContext: 'Established fintech company, professional environment',
       amenities: {
         parking: true,
-        dogFriendly: false,
+        dogFriendly: true,
         afterHours: true,
       },
       availability: {
@@ -44,6 +45,33 @@ async function seed() {
         wednesday: ['10am', '11am', '2pm'],
       },
       monthlyRate: 4800,
+      detailedAmenities: {
+        parking: {
+          type: 'off-site',
+          location: 'Park & Go Garage (1 block away)',
+          costMonthly: 200,
+          spotsAvailable: 4,
+          provider: 'Park & Go Garage',
+        },
+        access: {
+          system: 'Key card (Honeywell)',
+          costPerCard: 25,
+          process: 'Building management issues cards within 48 hours',
+          hours: '24/7',
+        },
+        meetingRooms: {
+          count: 2,
+          sizes: [6, 10],
+          bookingSystem: 'BuildingOS online calendar',
+          maxHoursPerBooking: 4,
+        },
+        rentInclusions: {
+          utilities: true,
+          internet: '1 Gbps fiber',
+          janitorial: 'Monday/Wednesday/Friday',
+          hvac: true,
+        },
+      },
     },
     {
       name: 'SOMA Creative Space',
@@ -54,7 +82,7 @@ async function seed() {
       hostContext: 'Creative agency, collaborative atmosphere',
       amenities: {
         parking: false,
-        dogFriendly: true,
+        dogFriendly: false,
         afterHours: true,
       },
       availability: {
@@ -62,6 +90,36 @@ async function seed() {
         thursday: ['10am', '2pm'],
       },
       monthlyRate: 5200,
+      detailedAmenities: {
+        parking: {
+          type: 'building-garage',
+          costPerDay: 25,
+          sharedSpots: true,
+          spotsAvailable: 2,
+          note: 'Can share spots among team members',
+        },
+        dogPolicy: {
+          allowed: false,
+          reason: 'Landlord policy (building-wide)',
+          flexibility: 'None',
+          alternative: 'Service animals only',
+        },
+        access: {
+          afterHours: true,
+          advanceNotice: '24 hours to security',
+          securityContact: 'security@buildingmgmt.com',
+        },
+        meetingRooms: {
+          count: 3,
+          sizes: [4, 8, 12],
+          bookingSystem: 'First-come-first-served',
+        },
+        rentInclusions: {
+          utilities: true,
+          internet: '500 Mbps',
+          janitorial: 'Daily',
+        },
+      },
     },
     {
       name: 'Mission District Hub',
@@ -80,6 +138,37 @@ async function seed() {
         wednesday: ['10am', '1pm'],
       },
       monthlyRate: 4900,
+      detailedAmenities: {
+        parking: {
+          type: 'street-only',
+          note: 'Metered street parking, $3/hour',
+        },
+        dogPolicy: {
+          allowed: true,
+          sizeLimit: 'No limit',
+          deposit: 0,
+          note: 'Very dog-friendly, multiple office dogs on-site',
+        },
+        access: {
+          hours: '24/7',
+          system: 'Smart lock with code',
+          cost: 0,
+        },
+        meetingRooms: {
+          count: 1,
+          sizes: [8],
+          bookingSystem: 'Shared Slack channel',
+          note: 'Casual booking, very flexible',
+        },
+        rentInclusions: {
+          utilities: true,
+          internet: '1 Gbps fiber',
+          janitorial: 'Twice weekly',
+          kitchen: 'Shared kitchen with coffee/snacks',
+        },
+        hostStatus: 'pending',
+        lastContact: '2 days ago',
+      },
     },
   ];
 
@@ -97,31 +186,116 @@ async function seed() {
   const emailData = [
     {
       dealId: deal.id,
+      from: 'sarah@acme-ai.com',
+      to: 'agent@tandem.space',
+      subject: 'Office Space for 8-Person Team',
+      body: `Hi! We're looking for office space for our 8-person team. Budget is around $5,000/month.
+
+Must-haves:
+- Dog-friendly (we have 2 office dogs)
+- Parking for at least 4 cars
+- Access outside of 9-5 (team works late sometimes)
+- Meeting room we can use for client calls
+- Decent internet (we do a lot of video calls)
+
+Would love to see what's available in SF (ideally SOMA/Mission).
+
+Thanks!
+Sarah`,
+      sentAt: new Date('2025-01-01T09:00:00Z'),
+      aiGenerated: false,
+      aiMetadata: null,
+    },
+    {
+      dealId: deal.id,
       from: 'agent@tandem.space',
       to: 'sarah@acme-ai.com',
-      subject: 'Office Spaces for Acme AI - 3 Great Options',
+      subject: 'Re: Office Space for 8-Person Team',
       body: `Hi Sarah,
 
-Great speaking with you yesterday! Based on your requirements (8-person team, $5k/month budget, dog-friendly), I've identified 3 excellent spaces in SF:
+Great to hear from you! I have a few spaces that might work. Let me do some digging on the specific amenities you mentioned and I'll get back to you with details.
 
-1. **FiDi Office** - 123 Market St
-   - $4,800/month, parking available
-   - Professional fintech environment
+Talk soon,
+Alex`,
+      sentAt: new Date('2025-01-01T10:30:00Z'),
+      aiGenerated: false,
+      aiMetadata: null,
+    },
+    {
+      dealId: deal.id,
+      from: 'agent@tandem.space',
+      to: 'leasing@techcorp.com',
+      subject: 'Quick Questions: 123 Market St Space',
+      body: `Hi,
 
-2. **SOMA Creative Space** - 456 Folsom St
-   - $5,200/month, dog-friendly, creative vibe
-   - After-hours access included
+I have a potential tenant interested in your FiDi space. Quick questions:
+- Is the space dog-friendly?
+- What's the parking situation?
+- Can tenants access after hours?
+- What meeting rooms are available?
+- What's the internet speed?
 
-3. **Mission District Hub** - 789 Valencia St
-   - $4,900/month, dog-friendly
-   - Hosted by CloudScale (YC W21, AI startup like you!)
+Thanks!`,
+      sentAt: new Date('2025-01-01T11:00:00Z'),
+      aiGenerated: false,
+      aiMetadata: null,
+    },
+    {
+      dealId: deal.id,
+      from: 'agent@tandem.space',
+      to: 'hello@designstudio.com',
+      subject: 'Quick Questions: 456 Folsom St Space',
+      body: `Hi there,
 
-Would you like to schedule tours? I'm happy to coordinate with all three hosts.
+I have a client looking at your SOMA space. Could you let me know:
+- Dog-friendly?
+- Parking options?
+- After-hours access?
+- Meeting room availability?
+- Internet setup?
+
+Appreciate it!`,
+      sentAt: new Date('2025-01-01T11:05:00Z'),
+      aiGenerated: false,
+      aiMetadata: null,
+    },
+    {
+      dealId: deal.id,
+      from: 'agent@tandem.space',
+      to: 'spaces@cloudscale.io',
+      subject: 'Inquiry: Mission District Space',
+      body: `Hey CloudScale team,
+
+I have an 8-person AI startup looking for space. Your Mission location could be perfect. Can you share details on:
+- Dog policy?
+- Parking?
+- Access hours?
+- Meeting rooms?
+- Internet?
+
+Thanks!`,
+      sentAt: new Date('2025-01-01T11:10:00Z'),
+      aiGenerated: false,
+      aiMetadata: null,
+    },
+    {
+      dealId: deal.id,
+      from: 'agent@tandem.space',
+      to: 'sarah@acme-ai.com',
+      subject: 'Re: Office Space - Initial Options',
+      body: `Hi Sarah,
+
+Good news! I've identified 3 spaces that match your criteria:
+
+1. **FiDi Office** - 123 Market St ($4,800/mo)
+2. **SOMA Creative Space** - 456 Folsom St ($5,200/mo)
+3. **Mission District Hub** - 789 Valencia St ($4,900/mo)
+
+I'm gathering detailed info on amenities from the hosts. Will send full details once I hear back!
 
 Best,
-Alex
-Tandem`,
-      sentAt: new Date('2025-01-02T10:00:00Z'),
+Alex`,
+      sentAt: new Date('2025-01-02T14:00:00Z'),
       aiGenerated: false,
       aiMetadata: null,
     },
@@ -129,30 +303,77 @@ Tandem`,
       dealId: deal.id,
       from: 'sarah@acme-ai.com',
       to: 'agent@tandem.space',
-      subject: 'Re: Office Spaces for Acme AI - 3 Great Options',
+      subject: 'Re: Office Space - Follow-up Questions',
       body: `Hi Alex,
 
-These all look great! I'd love to tour all three spaces.
+Thanks for these! Before we schedule tours, I have some detailed questions:
 
-I'm available Tuesday afternoon or Wednesday morning. Our CEO can only join Tuesday 2-4pm or Wednesday 11am-12pm, and we really want him to see the spaces.
+**FiDi Office:**
+- Parking garage - do we pay monthly or per use? Can we get 4 passes?
+- 24/7 access - how does the key card distribution work for 8 people?
+- Meeting rooms - what's the booking system? Any size limits?
+- What's included in rent? (utilities, internet, janitorial)
 
-Quick questions:
-- Does the FiDi office have parking? (We might need it for client visits)
-- Can we access the SOMA space after hours? (Our team works late sometimes)
-- What's the story with CloudScale? Would be great to connect with a similar-stage company.
+**SOMA Space:**
+- You mentioned it might not be dog-friendly - is that a hard no or negotiable for small dogs under 20lbs?
+- What's the parking situation exactly? $25/day per person or can we share spots?
+- After hours - do we need to give advance notice to security?
 
-Can you help coordinate tours that work with our CEO's schedule?
+**Mission Space:**
+- Any update on this one? Still waiting to hear back?
+
+**Tours:**
+Our CEO can ONLY do Tuesday 2-4pm or Wednesday 11am-12pm next week. Can we see all three spaces in one of those windows? Ideally in geographical order so we're not zigzagging across the city.
 
 Thanks!
 Sarah`,
-      sentAt: new Date('2025-01-02T14:30:00Z'),
+      sentAt: new Date('2025-01-03T09:00:00Z'),
+      aiGenerated: false,
+      aiMetadata: null,
+    },
+    {
+      dealId: deal.id,
+      from: 'agent@tandem.space',
+      to: 'leasing@techcorp.com',
+      subject: 'Follow-up: FiDi Office Details + Tour Request',
+      body: `Hi,
+
+Client has follow-up questions about the FiDi space:
+- Parking: How do monthly passes work? Can they get 4?
+- Key cards: Process for issuing 8 cards?
+- Meeting rooms: Booking system and size limits?
+- What's included in the $4,800/month rent?
+
+Also, can we schedule a tour for Tuesday 2-4pm or Wednesday 11am-12pm?
+
+Thanks!`,
+      sentAt: new Date('2025-01-03T09:15:00Z'),
+      aiGenerated: false,
+      aiMetadata: null,
+    },
+    {
+      dealId: deal.id,
+      from: 'agent@tandem.space',
+      to: 'hello@designstudio.com',
+      subject: 'Follow-up: SOMA Space Questions',
+      body: `Hi,
+
+Client asking:
+- Any flexibility on dog policy for small dogs (under 20lbs)?
+- Parking details - can multiple people share spots?
+- After hours access - how much advance notice needed?
+
+Also checking Tuesday 2-4pm or Wednesday 11am-12pm availability for tour.
+
+Thanks!`,
+      sentAt: new Date('2025-01-03T09:20:00Z'),
       aiGenerated: false,
       aiMetadata: null,
     },
   ];
 
   await db.insert(emails).values(emailData);
-  console.log('✅ Created email thread');
+  console.log('✅ Created email thread (10 emails - realistic multi-party coordination)');
 
   console.log('🎉 Seed complete!');
   process.exit(0);
