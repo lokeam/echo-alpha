@@ -5,43 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Separator } from '../../components/ui/separator';
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 import Link from 'next/link';
 
 export default function OverviewPage() {
   const router = useRouter();
-  const [isGenerating, setIsGenerating] = useState(false);
 
   const { data: emailThread, isLoading, error } = trpc.deal.getEmailThread.useQuery({ dealId: 1 });
 
-  const createDraftMutation = trpc.draft.create.useMutation({
-    onSuccess: (draft) => {
-      toast.success('AI draft generated! Redirecting to review...');
-      setTimeout(() => {
-        router.push(`/drafts/${draft.id}`);
-      }, 1000);
-    },
-    onError: (error) => {
-      toast.error(`Failed to generate draft: ${error.message}`);
-      setIsGenerating(false);
-    },
-  });
-
-  const latestInboundEmail = emailThread?.find(email => email.from === 'sarah@acme-ai.com');
-
-  const handleGenerateDraft = () => {
-    if (!latestInboundEmail) {
-      toast.error('No inbound email found');
-      return;
-    }
-
-    setIsGenerating(true);
-    createDraftMutation.mutate({
-      dealId: 1,
-      inboundEmailId: latestInboundEmail.id,
-    });
+  const handleContinueToDemo = () => {
+    router.push('/demo');
   };
 
   return (
@@ -118,61 +91,103 @@ export default function OverviewPage() {
 
             {emailThread && emailThread.length > 0 && (
               <div className="space-y-4">
-                <div className="text-sm text-gray-600 mb-4">
-                  <strong>Context:</strong> Sarah from Acme AI (8-person team, $5k budget) is looking for dog-friendly
-                  office space in SF. We sent her 3 options. She replied with questions.
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                  <h4 className="font-semibold text-yellow-900 mb-2">📧 The Challenge</h4>
+                  <p className="text-sm text-yellow-800 mb-3">
+                    Sarah from Acme AI sent a follow-up email with <strong>12 detailed questions</strong> about 3 different spaces:
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-yellow-900">
+                    <div className="bg-white p-3 rounded">
+                      <strong className="block mb-1">FiDi Office (4 questions):</strong>
+                      <ul className="space-y-1 text-yellow-800">
+                        <li>• Parking: monthly or per use?</li>
+                        <li>• Key cards for 8 people?</li>
+                        <li>• Meeting room booking system?</li>
+                        <li>• What's included in rent?</li>
+                      </ul>
+                    </div>
+                    <div className="bg-white p-3 rounded">
+                      <strong className="block mb-1">SOMA Space (3 questions):</strong>
+                      <ul className="space-y-1 text-yellow-800">
+                        <li>• Dog policy negotiable?</li>
+                        <li>• Parking: per person or shared?</li>
+                        <li>• After-hours advance notice?</li>
+                      </ul>
+                    </div>
+                    <div className="bg-white p-3 rounded">
+                      <strong className="block mb-1">Mission + Tours (5 questions):</strong>
+                      <ul className="space-y-1 text-yellow-800">
+                        <li>• Any update on Mission space?</li>
+                        <li>• Tuesday 2-4pm availability?</li>
+                        <li>• Wednesday 11am-12pm slots?</li>
+                        <li>• See all 3 in one window?</li>
+                        <li>• Tour in geographical order?</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div className="mt-3 p-3 bg-red-100 rounded text-sm">
+                    <strong className="text-red-900">Manual Pain Point:</strong>
+                    <span className="text-red-800"> 12 questions × 3 spaces = <strong>36 data points</strong> to look up across CRM, calendars, and host communications</span>
+                  </div>
                 </div>
 
-                {emailThread.map((email) => (
-                  <div key={email.id} className="border-l-4 border-blue-500 pl-4 py-3 bg-white rounded-r shadow-sm">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="text-sm text-gray-600">
-                        <strong>From:</strong> {email.from} → <strong>To:</strong> {email.to}
+                <details className="bg-gray-100 p-4 rounded">
+                  <summary className="cursor-pointer font-semibold text-sm text-gray-700 hover:text-gray-900">
+                    📨 View Full Email Thread ({emailThread.length} emails)
+                  </summary>
+                  <div className="mt-4 space-y-3">
+                    {emailThread.map((email) => (
+                      <div key={email.id} className="border-l-4 border-blue-500 pl-4 py-3 bg-white rounded-r shadow-sm">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="text-sm text-gray-600">
+                            <strong>From:</strong> {email.from} → <strong>To:</strong> {email.to}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {new Date(email.sent_at).toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="text-sm font-semibold mb-2">{email.subject}</div>
+                        <div className="text-sm whitespace-pre-wrap text-gray-700">{email.body}</div>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(email.sent_at).toLocaleString()}
-                      </div>
-                    </div>
-                    <div className="text-sm font-semibold mb-2">{email.subject}</div>
-                    <div className="text-sm whitespace-pre-wrap text-gray-700">{email.body}</div>
+                    ))}
                   </div>
-                ))}
+                </details>
 
                 <Separator className="my-6" />
 
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg border border-blue-200">
-                  <h3 className="font-semibold text-lg mb-3">Traditional Approach</h3>
+                  <h3 className="font-semibold text-lg mb-3">⏱️ Traditional Approach</h3>
                   <div className="space-y-2 text-sm text-gray-700 mb-4">
-                    <p>• Broker reads email (2 min)</p>
-                    <p>• Looks up space amenities in database (3 min)</p>
-                    <p>• Checks availability calendars (2 min)</p>
-                    <p>• Drafts response addressing all questions (5 min)</p>
-                    <p>• Reviews and sends (3 min)</p>
-                    <p className="font-semibold text-gray-900 pt-2">Total: <strong>15 minutes</strong></p>
+                    <p>• Read and parse Sarah's 12 questions (3 min)</p>
+                    <p>• Look up FiDi parking details in CRM (4 min)</p>
+                    <p>• Look up SOMA dog policy + parking (4 min)</p>
+                    <p>• Look up Mission space status (3 min)</p>
+                    <p>• Check 3 calendars for Tuesday/Wednesday availability (5 min)</p>
+                    <p>• Calculate optimal tour route (3 min)</p>
+                    <p>• Draft comprehensive response (15 min)</p>
+                    <p>• Wait for host responses on unclear items (hours to days)</p>
+                    <p>• Review and send (3 min)</p>
+                    <p className="font-semibold text-red-900 pt-2 bg-red-100 px-3 py-2 rounded">Total: <strong>45+ minutes</strong> (not including wait time)</p>
                   </div>
 
-                  <h3 className="font-semibold text-lg mb-3 mt-6">AI Co-Pilot Approach</h3>
+                  <h3 className="font-semibold text-lg mb-3 mt-6">✨ AI Co-Pilot Approach</h3>
                   <div className="space-y-2 text-sm text-gray-700 mb-4">
-                    <p>• AI analyzes email and generates draft (3 seconds)</p>
-                    <p>• Broker reviews and approves (2 min)</p>
-                    <p className="font-semibold text-gray-900 pt-2">Total: <strong>2-3 minutes</strong></p>
-                    <p className="text-blue-700 font-semibold">Time saved: <strong>80%</strong></p>
+                    <p>• AI reads thread + identifies 12 questions (instant)</p>
+                    <p>• AI queries CRM for all 3 spaces' detailed amenities (instant)</p>
+                    <p>• AI checks calendar availability across all spaces (instant)</p>
+                    <p>• AI calculates optimal tour route (instant)</p>
+                    <p>• AI generates comprehensive draft (30 seconds)</p>
+                    <p>• Broker reviews with full transparency into AI reasoning (2 min)</p>
+                    <p className="font-semibold text-green-900 pt-2 bg-green-100 px-3 py-2 rounded">Total: <strong>~3 minutes</strong></p>
+                    <p className="text-purple-700 font-semibold text-base mt-3">⚡ Time saved: <strong>93% (45 min → 3 min)</strong></p>
                   </div>
 
                   <Button
-                    onClick={handleGenerateDraft}
-                    disabled={isGenerating || createDraftMutation.isPending}
+                    onClick={handleContinueToDemo}
                     size="lg"
                     className="w-full mt-4"
                   >
-                    {isGenerating || createDraftMutation.isPending ? (
-                      <span className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        Generating AI Draft...
-                      </span>
-                    ) : (
-                      '✨ Generate AI Draft & Review'
-                    )}
+                    Continue to Demo →
                   </Button>
                 </div>
               </div>
