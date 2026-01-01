@@ -176,6 +176,7 @@ export const draftRouter = router({
       return {
         ...row,
         regenerationCount: row.regeneration_count,
+        lastRegenerationAt: row.last_regeneration_at,
         currentVersion: row.current_version,
         draftVersions: row.draft_versions,
         aiGeneratedBody: row.ai_generated_body,
@@ -411,7 +412,19 @@ export const draftRouter = router({
       }
 
       if (existing.regenerationCount >= 3) {
-        throw new Error('Maximum regeneration limit (3) reached. You can still manually edit the draft.');
+        const now = new Date();
+        const lastRegen = existing.lastRegenerationAt;
+
+        if (lastRegen) {
+          const hoursSinceLastRegen = (now.getTime() - new Date(lastRegen).getTime()) / (1000 * 60 * 60);
+
+          if (hoursSinceLastRegen < 24) {
+            const hoursRemaining = Math.ceil(24 - hoursSinceLastRegen);
+            throw new Error(`COOLDOWN:${hoursRemaining}`);
+          }
+        } else {
+          throw new Error('COOLDOWN:24');
+        }
       }
 
       if (existing.status === 'sent') {
@@ -479,6 +492,7 @@ export const draftRouter = router({
         .update(emailDrafts)
         .set({
           regenerationCount: existing.regenerationCount + 1,
+          lastRegenerationAt: new Date(),
           currentVersion: nextVersionNumber,
           draftVersions: updatedVersions,
           finalBody: newDraft.body,
