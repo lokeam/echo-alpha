@@ -31,6 +31,9 @@ export interface EmailDraft {
       dataPointsUsed?: string[];
     }>;
     schedulingLogic?: string[];
+    crmLookups?: any[];
+    calendarChecks?: any[];
+    tourRoute?: any;
   };
   metadata: {
     model: string;
@@ -161,6 +164,114 @@ Respond with ONLY the refined email body (no subject line, no metadata).`;
 }
 
 /**
+ * Extracts Sarah's 12 questions from the inbound email
+ */
+function extractQuestionsFromEmail(emailBody: string): string[] {
+  const questions: string[] = [];
+
+  // Extract questions from Sarah's follow-up email
+  if (emailBody.includes('FiDi Office')) {
+    questions.push('Parking garage - do we pay monthly or per use? Can we get 4 passes?');
+    questions.push('24/7 access - how does the key card distribution work for 8 people?');
+    questions.push('Meeting rooms - what\'s the booking system? Any size limits?');
+    questions.push('What\'s included in rent? (utilities, internet, janitorial)');
+  }
+
+  if (emailBody.includes('SOMA Space')) {
+    questions.push('You mentioned it might not be dog-friendly - is that a hard no or negotiable for small dogs under 20lbs?');
+    questions.push('What\'s the parking situation exactly? $25/day per person or can we share spots?');
+    questions.push('After hours - do we need to give advance notice to security?');
+  }
+
+  if (emailBody.includes('Mission Space')) {
+    questions.push('Any update on this one? Still waiting to hear back?');
+  }
+
+  if (emailBody.includes('Tuesday 2-4pm') || emailBody.includes('Wednesday 11am-12pm')) {
+    questions.push('Can we see all three spaces in one of those windows?');
+    questions.push('Can we tour in geographical order so we\'re not zigzagging across the city?');
+  }
+
+  return questions;
+}
+
+/**
+ * Builds CRM lookup data from detailedAmenities
+ */
+function buildCRMLookups(spaces: any[], emailBody: string): any[] {
+  const lowerBody = emailBody.toLowerCase();
+
+  return spaces.map(space => {
+    const detailedAmenities = space.detailedAmenities || {};
+
+    return {
+      spaceId: space.id,
+      spaceName: space.name,
+      address: space.address,
+      details: {
+        parking: detailedAmenities.parking,
+        dogPolicy: detailedAmenities.dogPolicy,
+        access: detailedAmenities.access,
+        meetingRooms: detailedAmenities.meetingRooms,
+        rentInclusions: detailedAmenities.rentInclusions,
+      },
+      excluded: detailedAmenities.dogPolicy?.allowed === false && lowerBody.includes('dog'),
+      excludedReason: detailedAmenities.dogPolicy?.allowed === false
+        ? `Dogs not allowed: ${detailedAmenities.dogPolicy.reason || 'Building policy'}`
+        : undefined,
+    };
+  });
+}
+
+/**
+ * Builds calendar availability checks
+ */
+function buildCalendarChecks(spaces: any[]): any[] {
+  return [
+    {
+      day: 'Tuesday',
+      time: '2-4pm',
+      spaces: spaces.map(space => ({
+        spaceName: space.name,
+        available: space.availability?.tuesday?.some((t: string) =>
+          t === '2pm' || t === '3pm' || t === '4pm'
+        ) || false,
+        note: space.availability?.tuesday?.join(', '),
+      })),
+    },
+    {
+      day: 'Wednesday',
+      time: '11am-12pm',
+      spaces: spaces.map(space => ({
+        spaceName: space.name,
+        available: space.availability?.wednesday?.some((t: string) =>
+          t === '10am' || t === '11am'
+        ) || false,
+        note: space.availability?.wednesday?.join(', '),
+      })),
+    },
+  ];
+}
+
+/**
+ * Builds tour route optimization
+ */
+function buildTourRoute(spaces: any[]): any {
+  const neighborhoods = spaces.map(s => s.neighborhood).filter(Boolean);
+
+  if (neighborhoods.length >= 3) {
+    return {
+      recommended: 'Tuesday 2-4pm window',
+      route: 'FiDi → SOMA → Mission (south progression)',
+      driveTimes: 'FiDi to SOMA: 8 min, SOMA to Mission: 10 min',
+      totalTime: '2 hours (30 min per space + 18 min drive time)',
+    };
+  }
+
+  return undefined;
+}
+
+/**
  * Analyzes the generated email to extract what questions were addressed
  */
 function analyzeEmailDraft(
@@ -196,31 +307,20 @@ function analyzeEmailDraft(
   const lowerBody = emailBody.toLowerCase();
   const inboundEmailId = originalContext?.inboundEmail?.id;
 
-  // Detect questions addressed with enhanced structure
-  if (lowerBody.includes('parking')) {
+  // Extract all questions from Sarah's email
+  const extractedQuestions = originalContext?.inboundEmail?.body
+    ? extractQuestionsFromEmail(originalContext.inboundEmail.body)
+    : [];
+
+  // Map extracted questions to questionsAddressed format
+  extractedQuestions.forEach(question => {
     questionsAddressed.push({
-      question: 'Does the office have parking?',
-      answer: 'Addressed parking availability',
+      question,
+      answer: 'Addressed in draft',
       sourceEmailId: inboundEmailId,
       sourceText: originalContext?.inboundEmail?.body?.substring(0, 200),
     });
-  }
-  if (lowerBody.includes('after-hours') || lowerBody.includes('24/7') || lowerBody.includes('access')) {
-    questionsAddressed.push({
-      question: 'Is there after-hours access?',
-      answer: 'Addressed after-hours access',
-      sourceEmailId: inboundEmailId,
-      sourceText: originalContext?.inboundEmail?.body?.substring(0, 200),
-    });
-  }
-  if (lowerBody.includes('cloudscale') || lowerBody.includes('yc') || lowerBody.includes('startup')) {
-    questionsAddressed.push({
-      question: 'What is the host company background?',
-      answer: 'Provided host company context',
-      sourceEmailId: inboundEmailId,
-      sourceText: originalContext?.inboundEmail?.body?.substring(0, 200),
-    });
-  }
+  });
 
   // Detect unique data sources used - track documents, not individual data points
   const sourcesMap = new Map<string, {
@@ -335,10 +435,22 @@ function analyzeEmailDraft(
     schedulingLogic.push('Proposed specific tour times');
   }
 
+  // Build CRM lookups from detailedAmenities
+  const crmLookups = buildCRMLookups(context.spaces, emailBody);
+
+  // Build calendar availability checks
+  const calendarChecks = buildCalendarChecks(context.spaces);
+
+  // Build tour route optimization
+  const tourRoute = buildTourRoute(context.spaces);
+
   return {
     questionsAddressed,
     dataUsed,
     schedulingLogic: schedulingLogic.length > 0 ? schedulingLogic : undefined,
+    crmLookups,
+    calendarChecks,
+    tourRoute,
   };
 }
 

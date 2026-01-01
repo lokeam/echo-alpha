@@ -39,6 +39,7 @@ export interface StructuredContext {
       [key: string]: string[] | undefined;
     };
     monthlyRate: number;
+    detailedAmenities?: any;
   }>;
   emailHistory: Array<{
     from: string;
@@ -92,6 +93,7 @@ export function buildStructuredContext(context: EmailContext): StructuredContext
         [key: string]: string[] | undefined;
       },
       monthlyRate: space.monthlyRate,
+      detailedAmenities: space.detailedAmenities,
     })),
     emailHistory: context.emailThread.map(email => ({
       from: email.from,
