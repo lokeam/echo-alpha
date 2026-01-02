@@ -1,72 +1,165 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 // TRPC
 import { trpc } from '@/lib/trpc';
 
 // Next
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 // Components
 import { EmailThreadItem } from '@/app/demo/components/EmailThreadItem';
 import { AIStatusIndicator, AIStatus } from '@/app/demo/components/AIStatusIndicator';
 import { StreamingDraft } from '@/app/demo/components/StreamingDraft';
-import { AIReasoningDrawer } from '@/app/demo/components/AIReasoningDrawer';
+import { EditableDraft } from '@/app/demo/components/EditableDraft';
+import { DraftActionBar } from '@/app/demo/components/DraftActionBar';
+import { SendEmailDialog } from '@/app/demo/components/SendEmailDialog';
+import { VersionHistoryDrawer } from '@/app/demo/components/VersionHistoryDrawer';
+import { AIInsightsDrawer } from '@/app/demo/components/AIInsightsDrawer';
+import { RegenerateDraftModal } from '@/app/drafts/[id]/components/RegenerateDraftModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 
 // Icons
-import { BulbIcon } from '@/components/ui/icons/bulb-icon';
 import { SparklesIcon } from '@/components/ui/icons/sparkles-icon';
 
-type GenerationState = 'idle' | 'generating' | 'streaming' | 'complete';
+type DemoState = 'idle' | 'generating' | 'streaming' | 'editing' | 'refining' | 'sent';
 
 export default function DemoPage() {
-  const router = useRouter();
+  // Email thread state
   const [expandedEmailIds, setExpandedEmailIds] = useState<Set<number>>(new Set());
-  const [generationState, setGenerationState] = useState<GenerationState>('idle');
-  const [currentStatus, setCurrentStatus] = useState<AIStatus>('reading_thread');
-  const [generatedDraft, setGeneratedDraft] = useState<string>('');
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [draftReasoning, setDraftReasoning] = useState<{
-    questionsAddressed?: Array<{
-      question: string;
-      answer: string;
-      sourceEmailId?: number;
-      sourceText?: string;
-      sourceEmailSubject?: string;
-      sourceEmailDate?: string;
-      sourceEmailFrom?: string;
-    }>;
-    dataUsed?: Array<any>;
-    crmLookups?: Array<any>;
-    calendarChecks?: Array<any>;
-    tourRoute?: any;
-  } | null>(null);
+  const [latestEmailId, setLatestEmailId] = useState<number | null>(null);
 
+  // Demo flow state
+  const [demoState, setDemoState] = useState<DemoState>('idle');
+  const [currentStatus, setCurrentStatus] = useState<AIStatus>('reading_thread');
+
+  // Draft data
+  const [draftId, setDraftId] = useState<number | null>(null);
+  const [draftBody, setDraftBody] = useState<string>('');
+  const [editedBody, setEditedBody] = useState<string>('');
+  const [confidence, setConfidence] = useState<number>(0);
+  const [status, setStatus] = useState<'pending' | 'approved' | 'sent'>('pending');
+  const [sentAt, setSentAt] = useState<Date | null>(null);
+
+  // Auto-save state
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [autoSaveTimer, setAutoSaveTimer] = useState<NodeJS.Timeout | null>(null);
+
+  // Version history
+  const [versions, setVersions] = useState<any[]>([]);
+  const [currentVersion, setCurrentVersion] = useState<number>(0);
+  const [regenerationCount, setRegenerationCount] = useState<number>(0);
+
+  // Reasoning data
+  const [reasoning, setReasoning] = useState<any>(null);
+
+  // UI state
+  const [reasoningDrawerOpen, setReasoningDrawerOpen] = useState(false);
+  const [versionDrawerOpen, setVersionDrawerOpen] = useState(false);
+  const [refineModalOpen, setRefineModalOpen] = useState(false);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+
+  // Queries
   const { data: emailThread, isLoading, error } = trpc.deal.getEmailThread.useQuery({ dealId: 1 });
 
+  // Mutations
+  const utils = trpc.useUtils();
+
+  const updateDraftMutation = trpc.draft.update.useMutation({
+    onSuccess: () => {
+      setIsSaving(false);
+      setLastSaved(new Date());
+      setDraftBody(editedBody);
+    },
+    onError: (error) => {
+      setIsSaving(false);
+      toast.error(`Failed to save: ${error.message}`);
+    },
+  });
+
+  const regenerateMutation = trpc.draft.regenerate.useMutation({
+    onSuccess: async (result) => {
+      toast.success(`Draft refined! (${result.versionsRemaining} refinements remaining)`);
+      await utils.draft.invalidate();
+      // Drizzle returns camelCase fields
+      const draft = result.draft;
+
+      setVersions(draft.draftVersions || []);
+      setCurrentVersion(draft.currentVersion ?? 0);
+      setRegenerationCount(draft.regenerationCount ?? 0);
+      setDraftBody(draft.finalBody || '');
+      setEditedBody(draft.finalBody || '');
+      setConfidence(draft.confidenceScore ?? 0);
+      setReasoning(draft.reasoning);
+      setDemoState('editing');
+      setRefineModalOpen(false);
+    },
+    onError: (error) => {
+      toast.error(`Failed to refine: ${error.message}`);
+      setDemoState('editing');
+    },
+  });
+
+  const switchVersionMutation = trpc.draft.switchVersion.useMutation({
+    onSuccess: (result) => {
+      // Drizzle returns camelCase fields
+      toast.success(`Switched to v${result.currentVersion}`);
+      setCurrentVersion(result.currentVersion ?? 0);
+      setDraftBody(result.finalBody || '');
+      setEditedBody(result.finalBody || '');
+      setConfidence(result.confidenceScore ?? 0);
+      setReasoning(result.reasoning);
+    },
+    onError: (error) => {
+      toast.error(`Failed to switch version: ${error.message}`);
+    },
+  });
+
+  const sendMutation = trpc.draft.send.useMutation({
+    onSuccess: () => {
+      toast.success('Email sent successfully!');
+      setStatus('sent');
+      setSentAt(new Date());
+      setDemoState('sent');
+      setSendDialogOpen(false);
+    },
+    onError: (error) => {
+      toast.error(`Failed to send: ${error.message}`);
+    },
+  });
+
+  // Initialize email thread - expand latest and set as locked
   useEffect(() => {
-    if (emailThread && emailThread.length > 0 && expandedEmailIds.size === 0) {
+    if (emailThread && emailThread.length > 0) {
       const mostRecentEmail = emailThread.reduce((latest, email) => {
         return new Date(email.sent_at) > new Date(latest.sent_at) ? email : latest;
       });
-      setExpandedEmailIds(new Set([mostRecentEmail.id]));
+      setLatestEmailId(mostRecentEmail.id);
+      if (expandedEmailIds.size === 0) {
+        setExpandedEmailIds(new Set([mostRecentEmail.id]));
+      }
     }
   }, [emailThread, expandedEmailIds.size]);
 
   const createDraftMutation = trpc.draft.create.useMutation({
     onSuccess: (draft) => {
-      setGeneratedDraft(draft.aiGeneratedBody);
-      setDraftReasoning(draft.reasoning);
-      setGenerationState('streaming');
+      setDraftId(draft.id);
+      setDraftBody(draft.aiGeneratedBody);
+      setEditedBody(draft.aiGeneratedBody);
+      setConfidence(draft.confidenceScore);
+      setReasoning(draft.reasoning);
+      setVersions(draft.draftVersions || []);
+      setCurrentVersion(draft.currentVersion || 0);
+      setRegenerationCount(draft.regenerationCount || 0);
+      setDemoState('streaming');
     },
     onError: (error) => {
       toast.error(`Failed to generate draft: ${error.message}`);
-      setGenerationState('idle');
+      setDemoState('idle');
     },
   });
 
@@ -80,7 +173,7 @@ export default function DemoPage() {
       return;
     }
 
-    setGenerationState('generating');
+    setDemoState('generating');
     simulateStatusProgress();
 
     createDraftMutation.mutate({
@@ -112,17 +205,102 @@ export default function DemoPage() {
     }, 800);
   };
 
+  // Auto-save logic
+  const handleAutoSave = useCallback(async () => {
+    if (!draftId || editedBody === draftBody) return;
+
+    setIsSaving(true);
+    await updateDraftMutation.mutateAsync({
+      draftId,
+      editedBody,
+    });
+  }, [draftId, editedBody, draftBody, updateDraftMutation]);
+
+  // Debounced auto-save on edit
+  useEffect(() => {
+    if (demoState !== 'editing') return;
+    if (editedBody === draftBody) return;
+
+    if (autoSaveTimer) {
+      clearTimeout(autoSaveTimer);
+    }
+
+    const timer = setTimeout(() => {
+      handleAutoSave();
+    }, 2000);
+
+    setAutoSaveTimer(timer);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [editedBody, demoState, draftBody, handleAutoSave, autoSaveTimer]);
+
+  // Handlers
   const handleStreamingComplete = () => {
-    setGenerationState('complete');
+    setDemoState('editing');
+  };
+
+  const handleBodyChange = (newBody: string) => {
+    setEditedBody(newBody);
   };
 
   const handleViewReasoning = () => {
-    setDrawerOpen(true);
+    setReasoningDrawerOpen(true);
   };
 
-  const handleContinueToReview = () => {
-    toast.success('Navigating to draft review...');
-    router.push('/drafts/1');
+  const handleViewVersions = () => {
+    setVersionDrawerOpen(true);
+  };
+
+  const handleRefine = () => {
+    setRefineModalOpen(true);
+  };
+
+  const handleRegenerate = async (instruction: string) => {
+    if (!draftId) return;
+
+    // Auto-save current version first
+    if (editedBody !== draftBody) {
+      toast.info('Saving current version...');
+      await handleAutoSave();
+    }
+
+    setDemoState('refining');
+    regenerateMutation.mutate({
+      draftId,
+      userInstruction: instruction,
+    });
+  };
+
+  const handleSwitchVersion = async (targetVersion: number) => {
+    if (!draftId) return;
+
+    // Auto-save current version first
+    if (editedBody !== draftBody) {
+      toast.info('Saving current version...');
+      await handleAutoSave();
+    }
+
+    switchVersionMutation.mutate({
+      draftId,
+      targetVersion,
+    });
+  };
+
+  const handleSendEmail = () => {
+    setSendDialogOpen(true);
+  };
+
+  const handleConfirmSend = async () => {
+    if (!draftId) return;
+
+    // Auto-save before sending
+    if (editedBody !== draftBody) {
+      await handleAutoSave();
+    }
+
+    sendMutation.mutate({ draftId });
   };
 
   return (
@@ -170,6 +348,7 @@ export default function DemoPage() {
                   email={email}
                   senderType={email.from === 'sarah@acme-ai.com' ? 'client' : 'agent'}
                   isExpanded={expandedEmailIds.has(email.id)}
+                  isLatest={email.id === latestEmailId}
                   onToggle={() => {
                     setExpandedEmailIds(prev => {
                       const newSet = new Set(prev);
@@ -187,80 +366,119 @@ export default function DemoPage() {
           )}
 
           {/* Draft Generation Section */}
-          {emailThread && emailThread.length > 0 && generationState === 'idle' && (
-            <Card className="mt-6 border-purple-200 bg-purple-50">
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-semibold text-purple-900 mb-2">
-                      <SparklesIcon className="w-6 h-6 mr-2"/> AI Draft Generator
-                    </h3>
-                    <p className="text-sm text-purple-700">
-                      Generate an AI-powered response to the latest email in this thread.
-                      The AI will analyze the conversation, deal requirements, and available spaces.
-                    </p>
+          {emailThread && emailThread.length > 0 && demoState === 'idle' && (
+            <div className="animated-border-wrapper mt-6">
+              <Card className="border-0 bg-white">
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-black mb-2 flex items-center text-xl">
+                        <SparklesIcon className="w-6 h-6 mr-2"/> AI Draft Generator
+                      </h3>
+                      <p className="text-sm text-black">
+                        Generate an AI-powered response to the latest email in this thread.
+                        The AI will analyze the conversation, deal requirements, and available spaces.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleGenerateDraft}
+                      disabled={createDraftMutation.isPending}
+                      className="font-bold w-full bg-[#FF2727] hover:bg-black transition-colors duration-200 ease-linear"
+                      size="lg"
+                    >
+                      <SparklesIcon className="w-6 h-6 mr-2"/> Generate AI Draft
+                    </Button>
                   </div>
-                  <Button
-                    onClick={handleGenerateDraft}
-                    disabled={createDraftMutation.isPending}
-                    className="w-full bg-purple-600 hover:bg-purple-700"
-                    size="lg"
-                  >
-                    <SparklesIcon className="w-6 h-6 mr-2"/> Generate AI Draft
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* AI Status Indicator */}
-          {generationState === 'generating' && (
+          {(demoState === 'generating' || demoState === 'refining') && (
             <div className="mt-6">
               <AIStatusIndicator currentStatus={currentStatus} />
             </div>
           )}
 
           {/* Streaming Draft */}
-          {(generationState === 'streaming' || generationState === 'complete') && (
-            <div className="mt-6 space-y-4">
+          {demoState === 'streaming' && (
+            <div className="mt-6">
               <StreamingDraft
-                fullText={generatedDraft}
+                fullText={draftBody}
                 onComplete={handleStreamingComplete}
                 onViewReasoning={handleViewReasoning}
               />
-              {generationState === 'complete' && (
-                <div className="flex gap-3">
-                  <Button
-                    onClick={handleViewReasoning}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    <BulbIcon className="w-4 h-4" /> View AI Reasoning
-                  </Button>
-                  <Button
-                    onClick={handleContinueToReview}
-                    className="flex-1 bg-[#FF2727] font-bold hover:bg-black"
-                  >
-                    Continue to Review →
-                  </Button>
-                </div>
-              )}
+            </div>
+          )}
+
+          {/* Editable Draft + Actions */}
+          {(demoState === 'editing' || demoState === 'sent') && (
+            <div className="mt-6 space-y-4">
+              <EditableDraft
+                draftBody={editedBody}
+                confidence={confidence}
+                status={status}
+                isSaving={isSaving}
+                lastSaved={lastSaved}
+                onBodyChange={handleBodyChange}
+              />
+              <DraftActionBar
+                onViewReasoning={handleViewReasoning}
+                onRefine={handleRefine}
+                onViewVersions={handleViewVersions}
+                onSend={handleSendEmail}
+                refinementsRemaining={3 - regenerationCount}
+                status={status}
+                isSaving={isSaving}
+                hasVersions={versions.length > 0}
+              />
             </div>
           )}
         </div>
       </div>
 
-      {/* AI Reasoning Drawer */}
-      {draftReasoning && (
-        <AIReasoningDrawer
-          open={drawerOpen}
-          onOpenChange={setDrawerOpen}
-          questionsAddressed={draftReasoning.questionsAddressed || []}
-          crmLookups={draftReasoning.crmLookups || []}
-          calendarChecks={draftReasoning.calendarChecks || []}
-          tourRoute={draftReasoning.tourRoute}
+      {/* AI Insights Drawer */}
+      {reasoning && (
+        <AIInsightsDrawer
+          open={reasoningDrawerOpen}
+          onOpenChange={setReasoningDrawerOpen}
+          reasoning={reasoning}
+          version={currentVersion}
+          confidence={confidence}
         />
       )}
+
+      {/* Version History Drawer */}
+      {versions.length > 0 && (
+        <VersionHistoryDrawer
+          open={versionDrawerOpen}
+          onOpenChange={setVersionDrawerOpen}
+          versions={versions}
+          currentVersion={currentVersion}
+          regenerationCount={regenerationCount}
+          onSwitchVersion={handleSwitchVersion}
+          isLoading={switchVersionMutation.isPending}
+        />
+      )}
+
+      {/* Regenerate Draft Modal */}
+      <RegenerateDraftModal
+        open={refineModalOpen}
+        onOpenChange={setRefineModalOpen}
+        onRegenerate={handleRegenerate}
+        versionsRemaining={3 - regenerationCount}
+        isLoading={regenerateMutation.isPending}
+      />
+
+      {/* Send Email Dialog */}
+      <SendEmailDialog
+        open={sendDialogOpen}
+        onOpenChange={setSendDialogOpen}
+        onConfirm={handleConfirmSend}
+        recipientEmail="lokeahnming@gmail.com"
+        isSending={sendMutation.isPending}
+      />
     </div>
   );
 }
