@@ -180,7 +180,7 @@ export default function OverviewPage() {
                     <p className="font-semibold text-red-900 pt-2 bg-red-100 px-3 py-2 rounded">Total: <strong>45+ minutes</strong> (not including wait time)</p>
                   </div>
 
-                  <h3 className="font-semibold text-lg mb-3 mt-6">✨ <SparklesIcon className="w-6 h-6 mr-2" /> AI Co-Pilot Approach</h3>
+                  <h3 className="font-semibold text-lg mb-3 mt-6 inline-flex items-center"><SparklesIcon className="w-6 h-6 mr-2" /> AI Co-Pilot Approach</h3>
                   <div className="space-y-2 text-sm text-gray-700 mb-4">
                     <p>• AI reads thread + identifies 12 questions (instant)</p>
                     <p>• AI queries CRM for all 3 spaces&apos; detailed amenities (instant)</p>
