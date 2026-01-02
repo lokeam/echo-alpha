@@ -318,7 +318,7 @@ export default function DraftDetailPage() {
                         </Link>
                       </div>
                       <p className="text-xs text-orange-600">
-                        💡 You can still manually edit this draft while waiting
+                        <SparklesIcon className="w-6 h-6 mr-2" /> You can still manually edit this draft while waiting
                       </p>
                     </div>
                   </div>
@@ -335,7 +335,7 @@ export default function DraftDetailPage() {
                     <Button
                       onClick={() => setShowRegenerateModal(true)}
                       disabled={draft.regenerationCount >= 3 || regenerateMutation.isPending}
-                      className="bg-purple-600 hover:bg-purple-700"
+                      className="bg-[#FF2727] hover:bg-black"
                     >
                       {(draft.regenerationCount || 0) >= 3 ? (
                         'Max Refinements Reached'

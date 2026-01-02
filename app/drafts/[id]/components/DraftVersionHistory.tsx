@@ -1,9 +1,15 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../components/ui/card';
-import { Badge } from '../../../../components/ui/badge';
-import { Button } from '../../../../components/ui/button';
 import { useState, useEffect } from 'react';
+
+// Components
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+
+// Icons
+import { FilePencilIcon } from '@/components/ui/icons/file-pencil-icon';
+
 
 interface DraftVersion {
   version: number;
@@ -93,16 +99,16 @@ export function DraftVersionHistory({
   }, [localCurrentVersion, versions.length]);
 
   return (
-    <Card className="border-purple-200 bg-purple-50">
+    <Card className="border-gray-200 bg-white">
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-purple-900">📜 Draft Versions</CardTitle>
-            <CardDescription className="text-purple-700">
+            <CardTitle className="text-black flex items-center"><FilePencilIcon className="w-6 h-6 mr-2"/> Draft Versions</CardTitle>
+            <CardDescription className="text-[#FF2727]">
               Version history with undo/redo (Cmd+Z / Cmd+Shift+Z)
             </CardDescription>
           </div>
-          <Badge className="bg-purple-600">
+          <Badge className="text-sm font-bold bg-[#FF2727] text-white">
             {versionsRemaining} refinement{versionsRemaining !== 1 ? 's' : ''} remaining
           </Badge>
         </div>
@@ -119,21 +125,21 @@ export function DraftVersionHistory({
                 onClick={() => handleVersionClick(version.version)}
                 className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
                   isCurrent
-                    ? 'border-purple-600 bg-purple-100'
-                    : 'border-purple-200 bg-white hover:border-purple-400'
+                    ? 'border-gray-600 bg-gray-200'
+                    : 'border-gray-200 bg-white hover:border-[#FF2727]'
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`font-semibold ${isCurrent ? 'text-purple-900' : 'text-gray-700'}`}>
+                      <span className={`font-semibold ${isCurrent ? 'text-black' : 'text-gray-700'}`}>
                         {version.version === 0 ? '○ v0 - Original AI Generation' : `○ v${version.version} - "${version.prompt}"`}
                       </span>
                       {isCurrent && (
                         <Badge variant="outline" className="text-xs">Current</Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-600">
+                    <div className="flex items-center gap-3 text-xs text-[#FF2727]">
                       <span>Confidence: {version.confidence}%</span>
                       {delta !== null && (
                         <span className={delta > 0 ? 'text-green-600' : delta < 0 ? 'text-red-600' : 'text-gray-600'}>
@@ -168,7 +174,7 @@ export function DraftVersionHistory({
             Redo →
           </Button>
           <div className="flex-1" />
-          <span className="text-xs text-purple-700 self-center">
+          <span className="text-sm text-black self-center">
             Viewing v{localCurrentVersion} of {versions.length - 1}
           </span>
         </div>

@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 
 // Icons
 import { SparklesIcon } from '@/components/ui/icons/sparkles-icon';
+import { BulbIcon } from '@/components/ui/icons/bulb-icon';
 
 interface RegenerateDraftModalProps {
   open: boolean;
@@ -57,7 +58,7 @@ export function RegenerateDraftModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <SparklesIcon className="w-6 h-6 mr-2" /> Refine Draft with AI
-            <Badge className="bg-purple-600">{versionsRemaining} remaining</Badge>
+            <Badge className="bg-[#FF2727]">{versionsRemaining} remaining</Badge>
           </DialogTitle>
           <DialogDescription>
             Provide specific guidance on how the AI should improve the draft.
@@ -72,7 +73,7 @@ export function RegenerateDraftModal({
                 setInstruction(e.target.value);
                 setError('');
               }}
-              placeholder='E.g., "Emphasize that parking is free for the first month" or "Make the tone more enthusiastic"'
+              placeholder='E.g."Emphasize that parking is free for the first month" or "Make the tone more enthusiastic"'
               className="min-h-[120px]"
               disabled={isLoading}
             />
@@ -86,9 +87,9 @@ export function RegenerateDraftModal({
             </div>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-semibold text-blue-900 text-sm mb-2">💡 Tips for best results:</h4>
-            <ul className="space-y-1 text-xs text-blue-800">
+          <div className="bg-white border-gray-50 rounded-lg p-4">
+            <h4 className="font-semibold text-gray-800 text-md mb-2 flex items-center gap-2"><BulbIcon className="w-6 h-6 mr-2" />Tips for best results:</h4>
+            <ul className="space-y-1 text-sm text-gray-600">
               <li>• Be specific about what to change or add</li>
               <li>• The AI will preserve original answers to questions</li>
               <li>• You can undo if you don&apos;t like the result</li>
@@ -111,7 +112,7 @@ export function RegenerateDraftModal({
                 Regenerating...
               </span>
             ) : (
-              <><SparklesIcon className="w-6 h-6 mr-2" />Regenerate (${versionsRemaining} remaining)</>
+              <><SparklesIcon className="w-6 h-6 mr-2" />Regenerate ({versionsRemaining} remaining)</>
             )}
           </Button>
         </DialogFooter>
