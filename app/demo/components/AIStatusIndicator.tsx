@@ -20,19 +20,35 @@ export type AIStatus =
   | 'drafting'
   | 'complete';
 
-interface StatusStep {
-  id: AIStatus;
+export interface StatusStep {
+  id: string;
   label: string;
-  completed: boolean;
-  inProgress: boolean;
+  completed?: boolean;
+  inProgress?: boolean;
+}
+
+export interface BrandColors {
+  primary: string;
+  success: string;
+  text: {
+    active: string;
+    completed: string;
+    pending: string;
+  };
 }
 
 interface AIStatusIndicatorProps {
-  currentStatus: AIStatus;
+  currentStatus?: AIStatus | string;
+  steps?: StatusStep[];
+  progress?: number;
+  isComplete?: boolean;
+  showSpinner?: boolean;
+  title?: string;
+  brandColors?: BrandColors;
   className?: string;
 }
 
-const STATUS_STEPS: Array<{ id: AIStatus; label: string }> = [
+const DEFAULT_STATUS_STEPS: Array<{ id: AIStatus; label: string }> = [
   { id: 'reading_thread', label: 'Reading email thread (10 emails)' },
   { id: 'identifying_questions', label: 'Identifying questions (12 found)' },
   { id: 'querying_crm_fidi', label: 'Querying CRM: FiDi Office parking details...' },
@@ -43,51 +59,106 @@ const STATUS_STEPS: Array<{ id: AIStatus; label: string }> = [
   { id: 'drafting', label: 'Drafting comprehensive response...' },
 ];
 
-export function AIStatusIndicator({ currentStatus, className }: AIStatusIndicatorProps) {
-  const currentIndex = STATUS_STEPS.findIndex(step => step.id === currentStatus);
+const DEFAULT_BRAND_COLORS: BrandColors = {
+  primary: '#FF2727',
+  success: '#10b981',
+  text: {
+    active: '#FF2727',
+    completed: '#5a5a5a',
+    pending: '#9ca3af',
+  },
+};
 
-  const steps: StatusStep[] = STATUS_STEPS.map((step, index) => ({
-    id: step.id,
-    label: step.label,
-    completed: index < currentIndex || currentStatus === 'complete',
-    inProgress: index === currentIndex && currentStatus !== 'complete',
-  }));
+export function AIStatusIndicator({
+  currentStatus,
+  steps: customSteps,
+  progress: customProgress,
+  isComplete = false,
+  showSpinner = true,
+  title = 'AI is working...',
+  brandColors = DEFAULT_BRAND_COLORS,
+  className,
+}: AIStatusIndicatorProps) {
+  const statusSteps = customSteps || DEFAULT_STATUS_STEPS;
+  const currentIndex = currentStatus
+    ? statusSteps.findIndex(step => step.id === currentStatus)
+    : -1;
 
-  const progress = currentStatus === 'complete'
+  const steps: StatusStep[] = customSteps
+    ? customSteps.map(step => ({
+        id: step.id,
+        label: step.label,
+        completed: step.completed ?? false,
+        inProgress: step.inProgress ?? false,
+      }))
+    : statusSteps.map((step, index) => ({
+        id: step.id,
+        label: step.label,
+        completed: index < currentIndex || isComplete,
+        inProgress: index === currentIndex && !isComplete,
+      }));
+
+  const progress = customProgress !== undefined
+    ? customProgress
+    : isComplete
     ? 100
-    : Math.round(((currentIndex + 1) / STATUS_STEPS.length) * 100);
+    : currentIndex >= 0
+    ? Math.round(((currentIndex + 1) / statusSteps.length) * 100)
+    : 0;
 
   return (
     <div className={cn("bg-white rounded-lg border border-gray-200 p-6", className)}>
       <div className="flex items-center gap-3 mb-4">
-        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#FF2727]"></div>
-        <h3 className="font-semibold text-gray-900">AI is working...</h3>
+        {showSpinner && !isComplete && (
+          <div
+            className="animate-spin rounded-full h-5 w-5 border-b-2"
+            style={{ borderBottomColor: brandColors.primary }}
+          />
+        )}
+        {isComplete && (
+          <div
+            className="w-5 h-5 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: brandColors.success }}
+          >
+            <CheckIcon className="w-3 h-3 text-white" />
+          </div>
+        )}
+        <h3 className="font-semibold text-gray-900">{isComplete ? 'Complete!' : title}</h3>
       </div>
 
       <div className="space-y-3 mb-4">
         {steps.map((step) => (
-          <div key={step.id} className="flex items-start gap-3">
-            <div className="shrink-0 mt-0.5">
+          <div key={step.id} className="flex items-center gap-3">
+            <div className="shrink-0">
               {step.completed ? (
-                <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                  <CircleCheckIcon className="w-5 h-5 text-white" />
+                <div
+                  className="w-6 h-6 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: brandColors.success }}
+                >
+                  <CircleCheckIcon className="w-6 h-6 text-white" />
                 </div>
               ) : step.inProgress ? (
-                <div className="w-5 h-5 rounded-full border-2 border-[#FF2727] border-t-transparent animate-spin"></div>
+                <div
+                  className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin"
+                  style={{ borderColor: brandColors.primary, borderTopColor: 'transparent' }}
+                />
               ) : (
                 <div className="w-5 h-5 rounded-full border-2 border-gray-300"></div>
               )}
             </div>
-            <span
-              className={cn(
-                "text-sm",
-                step.completed && "text-gray-600",
-                step.inProgress && "text-[#FF2727] font-medium",
-                !step.completed && !step.inProgress && "text-gray-400"
-              )}
+            <div
+              className="text-md"
+              style={{
+                color: step.completed
+                  ? brandColors.text.completed
+                  : step.inProgress
+                  ? brandColors.text.active
+                  : brandColors.text.pending,
+                fontWeight: step.inProgress ? 500 : 400,
+              }}
             >
-              {step.completed ? <CheckIcon className="w-5 h-5 text-green-500" /> : ''}{step.label}
-            </span>
+              {step.label}
+            </div>
           </div>
         ))}
       </div>
@@ -100,8 +171,11 @@ export function AIStatusIndicator({ currentStatus, className }: AIStatusIndicato
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
           <div
-            className="bg-linear-to-r from-white to-[#FF2727] h-full transition-all duration-500 ease-out"
-            style={{ width: `${progress}%` }}
+            className="h-full transition-all duration-500 ease-out"
+            style={{
+              width: `${progress}%`,
+              background: `linear-gradient(to right, white, ${brandColors.primary})`,
+            }}
           />
         </div>
       </div>

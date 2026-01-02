@@ -93,8 +93,8 @@ export function StreamingDraft({
           </div>
 
           {isComplete && (
-            <div className="text-xs text-[#FF2727] font-bold flex items-center gap-2">
-              <CheckIcon className="w-4 h-4" />
+            <div className="text-md text-[#FF2727] font-bold flex items-center gap-2">
+              <CheckIcon className="w-6 h-6 text-green-500" />
               <span>Draft complete and ready for review</span>
             </div>
           )}
