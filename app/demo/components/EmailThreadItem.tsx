@@ -17,14 +17,22 @@ interface EmailThreadItemProps {
   };
   senderType?: 'agent' | 'client';
   isExpanded?: boolean;
+  isLatest?: boolean;
   onToggle?: () => void;
 }
 
-export function EmailThreadItem({ email, senderType = 'agent', isExpanded = false, onToggle }: EmailThreadItemProps) {
+export function EmailThreadItem({ email, senderType = 'agent', isExpanded = false, isLatest = false, onToggle }: EmailThreadItemProps) {
   const [localExpanded, setLocalExpanded] = useState(isExpanded);
 
   const expanded = onToggle ? isExpanded : localExpanded;
-  const handleToggle = onToggle || (() => setLocalExpanded(!localExpanded));
+  const handleToggle = () => {
+    if (isLatest) return; // Cannot collapse latest email
+    if (onToggle) {
+      onToggle();
+    } else {
+      setLocalExpanded(!localExpanded);
+    }
+  };
 
   const formatDate = (date: string | Date) => {
     const d = new Date(date);
@@ -68,12 +76,14 @@ export function EmailThreadItem({ email, senderType = 'agent', isExpanded = fals
     <div
       className={cn(
         "border border-gray-200 rounded-lg bg-white transition-all duration-200 ease-in-out overflow-hidden",
-        expanded ? "shadow-sm" : "shadow-xs hover:shadow-sm cursor-pointer"
+        expanded ? "shadow-sm" : "shadow-xs",
+        !expanded && !isLatest && "hover:shadow-sm cursor-pointer",
+        isLatest && "cursor-default"
       )}
       style={{
         height: expanded ? 'auto' : '80px',
       }}
-      onClick={expanded ? undefined : handleToggle}
+      onClick={expanded || isLatest ? undefined : handleToggle}
     >
       <div className="flex gap-3 p-4">
         {/* Avatar - always visible */}
@@ -131,7 +141,11 @@ export function EmailThreadItem({ email, senderType = 'agent', isExpanded = fals
             e.stopPropagation();
             handleToggle();
           }}
-          className="shrink-0 ml-2 p-1 hover:bg-gray-100 rounded transition-colors self-start"
+          disabled={isLatest}
+          className={cn(
+            "shrink-0 ml-2 p-1 rounded transition-colors self-start",
+            isLatest ? "cursor-default opacity-50" : "hover:bg-gray-100"
+          )}
         >
           <ChevronIcon
             className={cn(
