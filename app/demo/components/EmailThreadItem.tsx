@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronIcon } from '../../../components/ui/icons/chevron-icon';
-import { cn } from '../../../lib/utils';
+
+// Components
+import { ChevronIcon } from '@/components/ui/icons/chevron-icon';
+import { cn } from '@/lib/utils';
 
 interface EmailThreadItemProps {
   email: {
@@ -13,11 +15,12 @@ interface EmailThreadItemProps {
     body: string;
     sent_at: string | Date;
   };
+  senderType?: 'agent' | 'client';
   isExpanded?: boolean;
   onToggle?: () => void;
 }
 
-export function EmailThreadItem({ email, isExpanded = false, onToggle }: EmailThreadItemProps) {
+export function EmailThreadItem({ email, senderType = 'agent', isExpanded = false, onToggle }: EmailThreadItemProps) {
   const [localExpanded, setLocalExpanded] = useState(isExpanded);
 
   const expanded = onToggle ? isExpanded : localExpanded;
@@ -46,6 +49,21 @@ export function EmailThreadItem({ email, isExpanded = false, onToggle }: EmailTh
       : normalized;
   };
 
+  const getAvatarStyles = (type: 'agent' | 'client') => {
+    if (type === 'client') {
+      return {
+        containerClass: 'bg-white border border-black',
+        textClass: 'text-black'
+      };
+    }
+    return {
+      containerClass: 'bg-gradient-to-br from-[#FFC9BF] to-[#FF2727]',
+      textClass: 'text-white'
+    };
+  };
+
+  const avatarStyles = getAvatarStyles(senderType);
+
   return (
     <div
       className={cn(
@@ -59,7 +77,11 @@ export function EmailThreadItem({ email, isExpanded = false, onToggle }: EmailTh
     >
       <div className="flex gap-3 p-4">
         {/* Avatar - always visible */}
-        <div className="shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
+        <div className={cn(
+          "shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold",
+          avatarStyles.containerClass,
+          avatarStyles.textClass
+        )}>
           {email.from.charAt(0).toUpperCase()}
         </div>
 

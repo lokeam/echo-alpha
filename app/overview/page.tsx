@@ -1,12 +1,22 @@
 'use client';
 
-import { trpc } from '../../lib/trpc';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
-import { Separator } from '../../components/ui/separator';
-import { useRouter } from 'next/navigation';
+// Next
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+// TRPC
+import { trpc } from '@/lib/trpc';
+
+// Components
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+
+// Icons
+import { SparklesIcon } from '@/components/ui/icons/sparkles-icon';
+import { MailOpenedIcon } from '@/components/ui/icons/mail-opened-icon';
+
 
 export default function OverviewPage() {
   const router = useRouter();
@@ -39,7 +49,7 @@ export default function OverviewPage() {
                 drafting emails, looking up space details, coordinating tours.
               </p>
               <p>
-                Only <strong>20% of time</strong> is spent on their "superpower": building trust, reading between
+                Only <strong>20% of time</strong> is spent on their &quot;superpower&quot;: building trust, reading between
                 the lines, delivering empathy at critical moments.
               </p>
               <p className="text-gray-600">
@@ -103,7 +113,7 @@ export default function OverviewPage() {
                         <li>• Parking: monthly or per use?</li>
                         <li>• Key cards for 8 people?</li>
                         <li>• Meeting room booking system?</li>
-                        <li>• What's included in rent?</li>
+                        <li>• What&apos;s included in rent?</li>
                       </ul>
                     </div>
                     <div className="bg-white p-3 rounded">
@@ -133,7 +143,7 @@ export default function OverviewPage() {
 
                 <details className="bg-gray-100 p-4 rounded">
                   <summary className="cursor-pointer font-semibold text-sm text-gray-700 hover:text-gray-900">
-                    📨 View Full Email Thread ({emailThread.length} emails)
+                    <MailOpenedIcon className="inline mr-2 w-6 h-6"/> View Full Email Thread ({emailThread.length} emails)
                   </summary>
                   <div className="mt-4 space-y-3">
                     {emailThread.map((email) => (
@@ -155,10 +165,10 @@ export default function OverviewPage() {
 
                 <Separator className="my-6" />
 
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg border border-blue-200">
+                <div className="bg-linear-to-r from-blue-50 to-purple-50 p-6 rounded-lg border border-blue-200">
                   <h3 className="font-semibold text-lg mb-3">⏱️ Traditional Approach</h3>
                   <div className="space-y-2 text-sm text-gray-700 mb-4">
-                    <p>• Read and parse Sarah's 12 questions (3 min)</p>
+                    <p>• Read and parse Sarah&apos;s 12 questions (3 min)</p>
                     <p>• Look up FiDi parking details in CRM (4 min)</p>
                     <p>• Look up SOMA dog policy + parking (4 min)</p>
                     <p>• Look up Mission space status (3 min)</p>
@@ -170,10 +180,10 @@ export default function OverviewPage() {
                     <p className="font-semibold text-red-900 pt-2 bg-red-100 px-3 py-2 rounded">Total: <strong>45+ minutes</strong> (not including wait time)</p>
                   </div>
 
-                  <h3 className="font-semibold text-lg mb-3 mt-6">✨ AI Co-Pilot Approach</h3>
+                  <h3 className="font-semibold text-lg mb-3 mt-6">✨ <SparklesIcon className="w-6 h-6 mr-2" /> AI Co-Pilot Approach</h3>
                   <div className="space-y-2 text-sm text-gray-700 mb-4">
                     <p>• AI reads thread + identifies 12 questions (instant)</p>
-                    <p>• AI queries CRM for all 3 spaces' detailed amenities (instant)</p>
+                    <p>• AI queries CRM for all 3 spaces&apos; detailed amenities (instant)</p>
                     <p>• AI checks calendar availability across all spaces (instant)</p>
                     <p>• AI calculates optimal tour route (instant)</p>
                     <p>• AI generates comprehensive draft (30 seconds)</p>
@@ -219,7 +229,7 @@ export default function OverviewPage() {
               <div className="flex items-start gap-3">
                 <Badge className="bg-green-600 mt-1">3</Badge>
                 <div>
-                  <strong>Human Review:</strong> You'll see the draft with AI insights. Low confidence drafts
+                  <strong>Human Review:</strong> You&apos;ll see the draft with AI insights. Low confidence drafts
                   appear first in the queue for priority review.
                 </div>
               </div>

@@ -1,10 +1,16 @@
 'use client';
 
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../../components/ui/dialog';
-import { Button } from '../../../../components/ui/button';
-import { Textarea } from '../../../../components/ui/textarea';
-import { Badge } from '../../../../components/ui/badge';
 import { useState } from 'react';
+
+// Components
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+
+
+// Icons
+import { SparklesIcon } from '@/components/ui/icons/sparkles-icon';
 
 interface RegenerateDraftModalProps {
   open: boolean;
@@ -50,7 +56,7 @@ export function RegenerateDraftModal({
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            ✨ Refine Draft with AI
+            <SparklesIcon className="w-6 h-6 mr-2" /> Refine Draft with AI
             <Badge className="bg-purple-600">{versionsRemaining} remaining</Badge>
           </DialogTitle>
           <DialogDescription>
@@ -85,7 +91,7 @@ export function RegenerateDraftModal({
             <ul className="space-y-1 text-xs text-blue-800">
               <li>• Be specific about what to change or add</li>
               <li>• The AI will preserve original answers to questions</li>
-              <li>• You can undo if you don't like the result</li>
+              <li>• You can undo if you don&apos;t like the result</li>
               <li>• Focus on one improvement at a time</li>
             </ul>
           </div>
@@ -105,7 +111,7 @@ export function RegenerateDraftModal({
                 Regenerating...
               </span>
             ) : (
-              `✨ Regenerate (${versionsRemaining} remaining)`
+              <><SparklesIcon className="w-6 h-6 mr-2" />Regenerate (${versionsRemaining} remaining)</>
             )}
           </Button>
         </DialogFooter>

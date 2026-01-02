@@ -1,8 +1,17 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../components/ui/card';
-import { Badge } from '../../../../components/ui/badge';
 import { useState } from 'react';
+
+// Components
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
+// Icons
+import { CheckIcon } from '@/components/ui/icons/check-icon';
+import { MailOpenedIcon } from '@/components/ui/icons/mail-opened-icon';
+import { FilesIcon } from '@/components/ui/icons/files-icon';
+
+
 
 interface Question {
   question: string;
@@ -107,7 +116,7 @@ export function EnhancedAIInsights({ reasoning, version, confidence = 0 }: Enhan
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <span className="text-sm font-medium text-blue-900">
-                            ✓ {q.question}
+                            <CheckIcon className="inline mr-2 w-6 h-6 text-green-500" /> {q.question}
                           </span>
                         </div>
                         <button className="text-blue-600 text-xs ml-2">
@@ -144,7 +153,7 @@ export function EnhancedAIInsights({ reasoning, version, confidence = 0 }: Enhan
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-lg">
-                              {source.sourceType === 'email' ? '📧' : '📄'}
+                              {source.sourceType === 'email' ? <MailOpenedIcon className="inline mr-2 w-6 h-6 text-gray-500" /> : <FilesIcon className="inline mr-2 w-6 h-6 text-gray-500" />}
                             </span>
                             <span className="text-sm font-semibold text-blue-900">
                               {source.sourceTitle}

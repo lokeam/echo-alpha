@@ -1,7 +1,13 @@
 'use client';
 
-import { CircleCheckIcon } from '../../../components/ui/icons/circle-check-icon';
-import { cn } from '../../../lib/utils';
+// Icons
+import { CircleCheckIcon } from '@/components/ui/icons/circle-check-icon';
+
+// Utils
+import { cn } from '@/lib/utils';
+
+// Icons
+import { CheckIcon } from '@/components/ui/icons/check-icon';
 
 export type AIStatus =
   | 'reading_thread'
@@ -54,20 +60,20 @@ export function AIStatusIndicator({ currentStatus, className }: AIStatusIndicato
   return (
     <div className={cn("bg-white rounded-lg border border-gray-200 p-6", className)}>
       <div className="flex items-center gap-3 mb-4">
-        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#FF2727]"></div>
         <h3 className="font-semibold text-gray-900">AI is working...</h3>
       </div>
 
       <div className="space-y-3 mb-4">
         {steps.map((step) => (
           <div key={step.id} className="flex items-start gap-3">
-            <div className="flex-shrink-0 mt-0.5">
+            <div className="shrink-0 mt-0.5">
               {step.completed ? (
                 <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                  <CircleCheckIcon className="w-3 h-3 text-white" />
+                  <CircleCheckIcon className="w-5 h-5 text-white" />
                 </div>
               ) : step.inProgress ? (
-                <div className="w-5 h-5 rounded-full border-2 border-purple-600 border-t-transparent animate-spin"></div>
+                <div className="w-5 h-5 rounded-full border-2 border-[#FF2727] border-t-transparent animate-spin"></div>
               ) : (
                 <div className="w-5 h-5 rounded-full border-2 border-gray-300"></div>
               )}
@@ -76,11 +82,11 @@ export function AIStatusIndicator({ currentStatus, className }: AIStatusIndicato
               className={cn(
                 "text-sm",
                 step.completed && "text-gray-600",
-                step.inProgress && "text-purple-700 font-medium",
+                step.inProgress && "text-[#FF2727] font-medium",
                 !step.completed && !step.inProgress && "text-gray-400"
               )}
             >
-              {step.completed ? '✓ ' : ''}{step.label}
+              {step.completed ? <CheckIcon className="w-5 h-5 text-green-500" /> : ''}{step.label}
             </span>
           </div>
         ))}
@@ -94,7 +100,7 @@ export function AIStatusIndicator({ currentStatus, className }: AIStatusIndicato
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
           <div
-            className="bg-gradient-to-r from-purple-600 to-blue-600 h-full transition-all duration-500 ease-out"
+            className="bg-linear-to-r from-white to-[#FF2727] h-full transition-all duration-500 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>

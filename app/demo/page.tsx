@@ -1,16 +1,26 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { trpc } from '../../lib/trpc';
-import { EmailThreadItem } from './components/EmailThreadItem';
-import { AIStatusIndicator, AIStatus } from './components/AIStatusIndicator';
-import { StreamingDraft } from './components/StreamingDraft';
-import { AIReasoningDrawer } from './components/AIReasoningDrawer';
-import { Button } from '../../components/ui/button';
-import { Card, CardContent } from '../../components/ui/card';
-import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
+
+// TRPC
+import { trpc } from '@/lib/trpc';
+
+// Next
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+// Components
+import { EmailThreadItem } from '@/app/demo/components/EmailThreadItem';
+import { AIStatusIndicator, AIStatus } from '@/app/demo/components/AIStatusIndicator';
+import { StreamingDraft } from '@/app/demo/components/StreamingDraft';
+import { AIReasoningDrawer } from '@/app/demo/components/AIReasoningDrawer';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { toast } from 'sonner';
+
+// Icons
+import { BulbIcon } from '@/components/ui/icons/bulb-icon';
+import { SparklesIcon } from '@/components/ui/icons/sparkles-icon';
 
 type GenerationState = 'idle' | 'generating' | 'streaming' | 'complete';
 
@@ -22,7 +32,15 @@ export default function DemoPage() {
   const [generatedDraft, setGeneratedDraft] = useState<string>('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [draftReasoning, setDraftReasoning] = useState<{
-    questionsAddressed?: Array<{ question: string; answer: string }>;
+    questionsAddressed?: Array<{
+      question: string;
+      answer: string;
+      sourceEmailId?: number;
+      sourceText?: string;
+      sourceEmailSubject?: string;
+      sourceEmailDate?: string;
+      sourceEmailFrom?: string;
+    }>;
     dataUsed?: Array<any>;
     crmLookups?: Array<any>;
     calendarChecks?: Array<any>;
@@ -108,7 +126,7 @@ export default function DemoPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pt-10">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-10 shadow-sm">
@@ -150,6 +168,7 @@ export default function DemoPage() {
                 <EmailThreadItem
                   key={email.id}
                   email={email}
+                  senderType={email.from === 'sarah@acme-ai.com' ? 'client' : 'agent'}
                   isExpanded={expandedEmailIds.has(email.id)}
                   onToggle={() => {
                     setExpandedEmailIds(prev => {
@@ -174,7 +193,7 @@ export default function DemoPage() {
                 <div className="space-y-4">
                   <div>
                     <h3 className="font-semibold text-purple-900 mb-2">
-                      ✨ AI Draft Generator
+                      <SparklesIcon className="w-6 h-6 mr-2"/> AI Draft Generator
                     </h3>
                     <p className="text-sm text-purple-700">
                       Generate an AI-powered response to the latest email in this thread.
@@ -187,7 +206,7 @@ export default function DemoPage() {
                     className="w-full bg-purple-600 hover:bg-purple-700"
                     size="lg"
                   >
-                    ✨ Generate AI Draft
+                    <SparklesIcon className="w-6 h-6 mr-2"/> Generate AI Draft
                   </Button>
                 </div>
               </CardContent>
@@ -216,11 +235,11 @@ export default function DemoPage() {
                     variant="outline"
                     className="flex-1"
                   >
-                    🧠 View AI Reasoning
+                    <BulbIcon className="w-4 h-4" /> View AI Reasoning
                   </Button>
                   <Button
                     onClick={handleContinueToReview}
-                    className="flex-1 bg-purple-600 hover:bg-purple-700"
+                    className="flex-1 bg-[#FF2727] font-bold hover:bg-black"
                   >
                     Continue to Review →
                   </Button>
@@ -236,7 +255,7 @@ export default function DemoPage() {
         <AIReasoningDrawer
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
-          questionsAddressed={draftReasoning.questionsAddressed?.map((q) => q.question) || []}
+          questionsAddressed={draftReasoning.questionsAddressed || []}
           crmLookups={draftReasoning.crmLookups || []}
           calendarChecks={draftReasoning.calendarChecks || []}
           tourRoute={draftReasoning.tourRoute}

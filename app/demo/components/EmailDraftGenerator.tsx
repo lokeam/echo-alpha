@@ -1,7 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { trpc } from '../../../lib/trpc';
+
+// TRPC
+import { trpc } from '@/lib/trpc';
+
+// Components
+import { SparklesIcon } from '@/components/ui/icons/sparkles-icon';
 
 interface EmailDraftGeneratorProps {
   dealId: number;
@@ -40,7 +45,7 @@ export function EmailDraftGenerator({ dealId, inboundEmailId }: EmailDraftGenera
               Generating...
             </span>
           ) : (
-            '✨ Generate AI Draft'
+            <><SparklesIcon className="w-4 h-4" /> Generate AI Draft</>
           )}
         </button>
       </div>

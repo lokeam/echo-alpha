@@ -1,8 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Button } from '../../../components/ui/button';
-import { Card, CardContent } from '../../../components/ui/card';
+
+// Components
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+
+// Icons
+import { FilePencilIcon } from '@/components/ui/icons/file-pencil-icon';
+import { BulbIcon } from '@/components/ui/icons/bulb-icon';
 
 interface StreamingDraftProps {
   fullText: string;
@@ -56,12 +62,13 @@ export function StreamingDraft({
   }, [fullText, streamingSpeed]);
 
   return (
-    <Card className="border-purple-200 bg-purple-50">
+    <Card className="border-gray-100 bg-gradient-to-br from-white to-[#FFC9BF]">
       <CardContent className="pt-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-purple-900 flex items-center gap-2">
-              📝 Draft Email
+            <h3 className="font-semibold text-black flex items-center gap-2">
+              <FilePencilIcon className="w-10 h-10" />
+              Draft Email
               {!isComplete && (
                 <span className="inline-block w-2 h-4 bg-purple-600 animate-pulse"></span>
               )}
@@ -71,21 +78,22 @@ export function StreamingDraft({
                 variant="outline"
                 size="sm"
                 onClick={onViewReasoning}
-                className="text-purple-700 border-purple-300 hover:bg-purple-100"
+                className="text-black border-[#FF2727] hover:bg-gray-200 flex items-center gap-2"
               >
+                <BulbIcon className="w-6 h-6" />
                 View AI Reasoning →
               </Button>
             )}
           </div>
 
-          <div className="bg-white rounded-lg p-4 border border-purple-200">
+          <div className="bg-white rounded-lg p-4 border border-gray-200">
             <div className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed font-mono">
               {displayedText}
             </div>
           </div>
 
           {isComplete && (
-            <div className="text-xs text-purple-700 flex items-center gap-2">
+            <div className="text-xs text-[#FF2727] font-bold flex items-center gap-2">
               <CheckIcon className="w-4 h-4" />
               <span>Draft complete and ready for review</span>
             </div>

@@ -1,12 +1,19 @@
 'use client';
 
-import { trpc } from '../../lib/trpc';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
-import { Button } from '../../components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import Link from 'next/link';
 import { useState } from 'react';
+
+// Next
+import Link from 'next/link';
+
+// TRPC
+import { trpc } from '@/lib/trpc';
+
+// Components
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 
 export default function DraftsPage() {
   const [statusFilter, setStatusFilter] = useState<'pending' | 'approved' | 'sent' | undefined>('pending');

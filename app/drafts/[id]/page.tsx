@@ -1,19 +1,28 @@
 'use client';
 
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { trpc } from '../../../lib/trpc';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
-import { Badge } from '../../../components/ui/badge';
-import { Button } from '../../../components/ui/button';
-import { Textarea } from '../../../components/ui/textarea';
-import { Separator } from '../../../components/ui/separator';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
 import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
+
+// Next
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { DraftVersionHistory } from './components/DraftVersionHistory';
-import { RegenerateDraftModal } from './components/RegenerateDraftModal';
-import { EnhancedAIInsights } from './components/EnhancedAIInsights';
+
+// TRPC
+import { trpc } from '@/lib/trpc';
+
+// Components
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
+import { DraftVersionHistory } from '@/app/drafts/[id]/components/DraftVersionHistory';
+import { RegenerateDraftModal } from '@/app/drafts/[id]/components/RegenerateDraftModal';
+import { EnhancedAIInsights } from '@/app/drafts/[id]/components/EnhancedAIInsights';
+import { toast } from 'sonner';
+
+// Icons
+import { SparklesIcon } from '@/components/ui/icons/sparkles-icon';
 
 export default function DraftDetailPage() {
   const params = useParams();
@@ -317,7 +326,7 @@ export default function DraftDetailPage() {
                   <div className="flex justify-between items-center">
                     <div>
                       <h3 className="font-semibold text-purple-900 mb-1">
-                        ✨ Refine with AI
+                        <SparklesIcon className="w-6 h-6 mr-2" /> Refine with AI
                       </h3>
                       <p className="text-sm text-purple-700">
                         Guide the AI to improve this draft with specific instructions
@@ -331,7 +340,7 @@ export default function DraftDetailPage() {
                       {(draft.regenerationCount || 0) >= 3 ? (
                         'Max Refinements Reached'
                       ) : (
-                        `✨ Refine Draft (${3 - (draft.regenerationCount || 0)} left)`
+                        <><SparklesIcon className="w-6 h-6 mr-2" /> Refine Draft (${3 - (draft.regenerationCount || 0)} left)</>
                       )}
                     </Button>
                   </div>

@@ -1,10 +1,10 @@
 import { cn } from '@/lib/utils';
 
-type XIconProps = {
+type CheckIconProps = {
   className?: string;
 };
 
-export function XIcon({ className }: XIconProps) {
+export function CheckIcon({ className }: CheckIconProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -16,11 +16,9 @@ export function XIcon({ className }: XIconProps) {
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={cn("icon icon-tabler icons-tabler-outline icon-tabler-x", className)}
-    >
-        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-        <path d="M18 6l-12 12" />
-        <path d="M6 6l12 12" />
-      </svg>
+      className={cn("icon icon-tabler icons-tabler-outline icon-tabler-check", className)}>
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <path d="M5 12l5 5l10 -10" />
+    </svg>
   );
 }

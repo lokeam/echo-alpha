@@ -10,6 +10,9 @@ export interface EmailDraft {
       answer: string;
       sourceEmailId?: number;
       sourceText?: string;
+      sourceEmailSubject?: string;
+      sourceEmailDate?: string;
+      sourceEmailFrom?: string;
     }>;
     dataUsed: Array<{
       sourceType: 'space' | 'deal' | 'email';
@@ -164,32 +167,83 @@ Respond with ONLY the refined email body (no subject line, no metadata).`;
 }
 
 /**
- * Extracts Sarah's 12 questions from the inbound email
+ * Extracts Sarah's 12 questions from the inbound email with source context
  */
-function extractQuestionsFromEmail(emailBody: string): string[] {
-  const questions: string[] = [];
+function extractQuestionsFromEmail(
+  emailBody: string
+): Array<{ question: string; sourceText: string }> {
+  const questions: Array<{ question: string; sourceText: string }> = [];
 
-  // Extract questions from Sarah's follow-up email
+  // Extract questions from Sarah's follow-up email with context
   if (emailBody.includes('FiDi Office')) {
-    questions.push('Parking garage - do we pay monthly or per use? Can we get 4 passes?');
-    questions.push('24/7 access - how does the key card distribution work for 8 people?');
-    questions.push('Meeting rooms - what\'s the booking system? Any size limits?');
-    questions.push('What\'s included in rent? (utilities, internet, janitorial)');
+    const fidiSection = emailBody.substring(
+      emailBody.indexOf('FiDi Office'),
+      emailBody.indexOf('SOMA Space') !== -1 ? emailBody.indexOf('SOMA Space') : emailBody.length
+    );
+
+    questions.push({
+      question: 'Parking garage - do we pay monthly or per use? Can we get 4 passes?',
+      sourceText: fidiSection.substring(0, 300)
+    });
+    questions.push({
+      question: '24/7 access - how does the key card distribution work for 8 people?',
+      sourceText: fidiSection.substring(0, 300)
+    });
+    questions.push({
+      question: 'Meeting rooms - what\'s the booking system? Any size limits?',
+      sourceText: fidiSection.substring(0, 300)
+    });
+    questions.push({
+      question: 'What\'s included in rent? (utilities, internet, janitorial)',
+      sourceText: fidiSection.substring(0, 300)
+    });
   }
 
   if (emailBody.includes('SOMA Space')) {
-    questions.push('You mentioned it might not be dog-friendly - is that a hard no or negotiable for small dogs under 20lbs?');
-    questions.push('What\'s the parking situation exactly? $25/day per person or can we share spots?');
-    questions.push('After hours - do we need to give advance notice to security?');
+    const somaSection = emailBody.substring(
+      emailBody.indexOf('SOMA Space'),
+      emailBody.indexOf('Mission Space') !== -1 ? emailBody.indexOf('Mission Space') : emailBody.length
+    );
+
+    questions.push({
+      question: 'You mentioned it might not be dog-friendly - is that a hard no or negotiable for small dogs under 20lbs?',
+      sourceText: somaSection.substring(0, 300)
+    });
+    questions.push({
+      question: 'What\'s the parking situation exactly? $25/day per person or can we share spots?',
+      sourceText: somaSection.substring(0, 300)
+    });
+    questions.push({
+      question: 'After hours - do we need to give advance notice to security?',
+      sourceText: somaSection.substring(0, 300)
+    });
   }
 
   if (emailBody.includes('Mission Space')) {
-    questions.push('Any update on this one? Still waiting to hear back?');
+    const missionSection = emailBody.substring(
+      emailBody.indexOf('Mission Space'),
+      emailBody.indexOf('Timing') !== -1 ? emailBody.indexOf('Timing') : emailBody.length
+    );
+
+    questions.push({
+      question: 'Any update on this one? Still waiting to hear back?',
+      sourceText: missionSection.substring(0, 200)
+    });
   }
 
   if (emailBody.includes('Tuesday 2-4pm') || emailBody.includes('Wednesday 11am-12pm')) {
-    questions.push('Can we see all three spaces in one of those windows?');
-    questions.push('Can we tour in geographical order so we\'re not zigzagging across the city?');
+    const timingSection = emailBody.substring(
+      emailBody.indexOf('Timing') !== -1 ? emailBody.indexOf('Timing') : emailBody.indexOf('Tuesday')
+    );
+
+    questions.push({
+      question: 'Can we see all three spaces in one of those windows?',
+      sourceText: timingSection.substring(0, 300)
+    });
+    questions.push({
+      question: 'Can we tour in geographical order so we\'re not zigzagging across the city?',
+      sourceText: timingSection.substring(0, 300)
+    });
   }
 
   return questions;
@@ -306,19 +360,27 @@ function analyzeEmailDraft(
 
   const lowerBody = emailBody.toLowerCase();
   const inboundEmailId = originalContext?.inboundEmail?.id;
+  const inboundEmail = originalContext?.inboundEmail;
 
-  // Extract all questions from Sarah's email
-  const extractedQuestions = originalContext?.inboundEmail?.body
-    ? extractQuestionsFromEmail(originalContext.inboundEmail.body)
+  // Extract all questions from Sarah's email with source context
+  const extractedQuestions = inboundEmail?.body
+    ? extractQuestionsFromEmail(inboundEmail.body)
     : [];
 
-  // Map extracted questions to questionsAddressed format
-  extractedQuestions.forEach(question => {
+  // Map extracted questions to questionsAddressed format with full metadata
+  extractedQuestions.forEach(({ question, sourceText }) => {
     questionsAddressed.push({
       question,
       answer: 'Addressed in draft',
       sourceEmailId: inboundEmailId,
-      sourceText: originalContext?.inboundEmail?.body?.substring(0, 200),
+      sourceText,
+      sourceEmailSubject: inboundEmail?.subject,
+      sourceEmailDate: inboundEmail?.sentAt ? new Date(inboundEmail.sentAt).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }) : undefined,
+      sourceEmailFrom: inboundEmail?.from,
     });
   });
 
