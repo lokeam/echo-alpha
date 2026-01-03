@@ -6,9 +6,12 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 // Icons
 import { CheckIcon } from '@/components/ui/icons/check-icon';
+import { TrashIcon } from '@/components/ui/icons/trash-icon';
+import { PaperClipIcon } from '@/components/ui/icons/paper-clip-icon';
 
 // Utils
 import { cn } from '@/lib/utils';
@@ -20,6 +23,8 @@ interface EditableDraftProps {
   isSaving: boolean;
   lastSaved: Date | null;
   onBodyChange: (body: string) => void;
+  onArchiveClick?: () => void;
+  onAttachFilesClick?: () => void;
   className?: string;
 }
 
@@ -30,6 +35,8 @@ export function EditableDraft({
   isSaving,
   lastSaved,
   onBodyChange,
+  onArchiveClick,
+  onAttachFilesClick,
   className,
 }: EditableDraftProps) {
   const [localBody, setLocalBody] = useState(draftBody);
@@ -101,10 +108,11 @@ export function EditableDraft({
             placeholder="AI-generated email draft will appear here..."
           />
 
-          {/* Auto-save indicator */}
+          {/* Auto-save indicator and action buttons */}
           {!isReadOnly && (
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
+            <div className="space-y-3">
+              {/* Auto-save status */}
+              <div className="flex items-center gap-2 text-xs">
                 {isSaving ? (
                   <>
                     <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-600"></div>
@@ -121,9 +129,37 @@ export function EditableDraft({
                   <span className="text-gray-500">Not saved yet</span>
                 )}
               </div>
-              <span className="text-gray-500">
-                {localBody.length} characters
-              </span>
+
+              {/* Character counter and action buttons */}
+              <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                <span className="text-sm text-gray-600">
+                  {localBody.length} characters
+                </span>
+                <div className="flex gap-2">
+                  {onAttachFilesClick && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onAttachFilesClick}
+                      className="text-gray-700 hover:text-gray-900"
+                    >
+                      <PaperClipIcon className="w-4 h-4 mr-2" />
+                      Attach Files
+                    </Button>
+                  )}
+                  {onArchiveClick && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onArchiveClick}
+                      className="text-gray-700 hover:text-red-600 hover:border-red-300"
+                    >
+                      <TrashIcon className="w-4 h-4 mr-2" />
+                      Archive
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>

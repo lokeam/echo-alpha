@@ -14,7 +14,8 @@ import { AIStatusIndicator, AIStatus } from '@/app/demo/components/AIStatusIndic
 import { StreamingDraft } from '@/app/demo/components/StreamingDraft';
 import { EditableDraft } from '@/app/demo/components/EditableDraft';
 import { DraftActionBar } from '@/app/demo/components/DraftActionBar';
-import { SendEmailDialog } from '@/app/demo/components/SendEmailDialog';
+import { ArchiveDraftDialog } from '@/app/demo/components/ArchiveDraftDialog';
+import { SendConfirmationDialog } from '@/app/demo/components/SendConfirmationDialog';
 import { VersionHistoryDrawer } from '@/app/demo/components/VersionHistoryDrawer';
 import { AIInsightsDrawer } from '@/app/demo/components/AIInsightsDrawer';
 import { RegenerateDraftModal } from '@/app/drafts/[id]/components/RegenerateDraftModal';
@@ -61,7 +62,8 @@ export default function DemoPage() {
   const [reasoningDrawerOpen, setReasoningDrawerOpen] = useState(false);
   const [versionDrawerOpen, setVersionDrawerOpen] = useState(false);
   const [refineModalOpen, setRefineModalOpen] = useState(false);
-  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [sendConfirmDialogOpen, setSendConfirmDialogOpen] = useState(false);
 
   // Queries
   const { data: emailThread, isLoading, error } = trpc.deal.getEmailThread.useQuery({ dealId: 1 });
@@ -119,13 +121,27 @@ export default function DemoPage() {
     },
   });
 
+  const archiveMutation = trpc.draft.archive.useMutation({
+    onSuccess: () => {
+      toast.success('Draft archived successfully');
+      setArchiveDialogOpen(false);
+      setDemoState('idle');
+      setDraftId(null);
+      setDraftBody('');
+      setEditedBody('');
+    },
+    onError: (error) => {
+      toast.error(`Failed to archive: ${error.message}`);
+    },
+  });
+
   const sendMutation = trpc.draft.send.useMutation({
     onSuccess: () => {
       toast.success('Email sent successfully!');
       setStatus('sent');
       setSentAt(new Date());
       setDemoState('sent');
-      setSendDialogOpen(false);
+      setSendConfirmDialogOpen(false);
     },
     onError: (error) => {
       toast.error(`Failed to send: ${error.message}`);
@@ -288,8 +304,23 @@ export default function DemoPage() {
     });
   };
 
+  const handleArchiveClick = () => {
+    setArchiveDialogOpen(true);
+  };
+
+  const handleConfirmArchive = async (reason?: string) => {
+    if (!draftId) return;
+
+    // Auto-save before archiving
+    if (editedBody !== draftBody) {
+      await handleAutoSave();
+    }
+
+    archiveMutation.mutate({ draftId, reason });
+  };
+
   const handleSendEmail = () => {
-    setSendDialogOpen(true);
+    setSendConfirmDialogOpen(true);
   };
 
   const handleConfirmSend = async () => {
@@ -300,7 +331,7 @@ export default function DemoPage() {
       await handleAutoSave();
     }
 
-    sendMutation.mutate({ draftId });
+    sendMutation.mutate({ draftId, confirmed: true });
   };
 
   return (
@@ -422,6 +453,8 @@ export default function DemoPage() {
                 isSaving={isSaving}
                 lastSaved={lastSaved}
                 onBodyChange={handleBodyChange}
+                onAttachFilesClick={status !== 'sent' ? () => toast.info('Attach files feature coming soon') : undefined}
+                onArchiveClick={status !== 'sent' ? handleArchiveClick : undefined}
               />
               <DraftActionBar
                 onViewReasoning={handleViewReasoning}
@@ -471,13 +504,22 @@ export default function DemoPage() {
         isLoading={regenerateMutation.isPending}
       />
 
-      {/* Send Email Dialog */}
-      <SendEmailDialog
-        open={sendDialogOpen}
-        onOpenChange={setSendDialogOpen}
+      {/* Archive Draft Dialog */}
+      <ArchiveDraftDialog
+        open={archiveDialogOpen}
+        onOpenChange={setArchiveDialogOpen}
+        onConfirm={handleConfirmArchive}
+        isLoading={archiveMutation.isPending}
+      />
+
+      {/* Send Confirmation Dialog */}
+      <SendConfirmationDialog
+        open={sendConfirmDialogOpen}
+        onOpenChange={setSendConfirmDialogOpen}
         onConfirm={handleConfirmSend}
-        recipientEmail="lokeahnming@gmail.com"
-        isSending={sendMutation.isPending}
+        recipientEmail={latestInboundEmail?.from || 'sarah@acme-ai.com'}
+        subject="Re: Office Space Inquiry - Acme AI"
+        isLoading={sendMutation.isPending}
       />
     </div>
   );
