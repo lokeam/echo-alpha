@@ -19,10 +19,14 @@ import { Separator } from '@/components/ui/separator';
 import { DraftVersionHistory } from '@/app/drafts/[id]/components/DraftVersionHistory';
 import { RegenerateDraftModal } from '@/app/drafts/[id]/components/RegenerateDraftModal';
 import { EnhancedAIInsights } from '@/app/drafts/[id]/components/EnhancedAIInsights';
+import { ArchiveDraftDialog } from '@/app/demo/components/ArchiveDraftDialog';
+import { SendConfirmationDialog } from '@/app/demo/components/SendConfirmationDialog';
 import { toast } from 'sonner';
 
 // Icons
 import { SparklesIcon } from '@/components/ui/icons/sparkles-icon';
+import { TrashIcon } from '@/components/ui/icons/trash-icon';
+import { ArrowIconUp } from '@/components/ui/icons/arrow-up-icon';
 
 export default function DraftDetailPage() {
   const params = useParams();
@@ -35,6 +39,8 @@ export default function DraftDetailPage() {
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRegenerateModal, setShowRegenerateModal] = useState(false);
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [showSendConfirmDialog, setShowSendConfirmDialog] = useState(false);
   const [cooldownHours, setCooldownHours] = useState<number | null>(null);
 
   const utils = trpc.useUtils();
@@ -69,10 +75,22 @@ export default function DraftDetailPage() {
   const sendMutation = trpc.draft.send.useMutation({
     onSuccess: () => {
       toast.success('Email sent successfully!');
+      setShowSendConfirmDialog(false);
       router.push('/drafts');
     },
     onError: (error) => {
       toast.error(`Failed to send: ${error.message}`);
+    },
+  });
+
+  const archiveMutation = trpc.draft.archive.useMutation({
+    onSuccess: () => {
+      toast.success('Draft archived successfully');
+      setShowArchiveDialog(false);
+      router.push('/drafts');
+    },
+    onError: (error) => {
+      toast.error(`Failed to archive: ${error.message}`);
     },
   });
 
@@ -271,6 +289,30 @@ export default function DraftDetailPage() {
                   </Button>
                 </div>
               )}
+
+              {/* Action buttons - Archive and Send */}
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowArchiveDialog(true)}
+                    disabled={draft.status === 'sent' || draft.status === 'archived'}
+                  >
+                    <TrashIcon className="w-4 h-4 mr-2" />
+                    Archive
+                  </Button>
+                </div>
+
+                <Button
+                  onClick={() => setShowSendConfirmDialog(true)}
+                  disabled={draft.status === 'sent' || draft.status === 'archived'}
+                  className="bg-[#FF2727] hover:bg-black"
+                >
+                  <ArrowIconUp className="w-4 h-4 mr-2" />
+                  Send Email
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -471,6 +513,24 @@ export default function DraftDetailPage() {
           onRegenerate={handleRegenerate}
           versionsRemaining={3 - (draft.regenerationCount || 0)}
           isLoading={regenerateMutation.isPending}
+        />
+
+        {/* Archive Draft Dialog */}
+        <ArchiveDraftDialog
+          open={showArchiveDialog}
+          onOpenChange={setShowArchiveDialog}
+          onConfirm={(reason) => archiveMutation.mutate({ draftId, reason })}
+          isLoading={archiveMutation.isPending}
+        />
+
+        {/* Send Confirmation Dialog */}
+        <SendConfirmationDialog
+          open={showSendConfirmDialog}
+          onOpenChange={setShowSendConfirmDialog}
+          onConfirm={() => sendMutation.mutate({ draftId, confirmed: true })}
+          recipientEmail={draft.seekerEmail || 'lokeahnming@gmail.com'}
+          subject={`Re: ${draft.inboundSubject || 'Office Space Inquiry'}`}
+          isLoading={sendMutation.isPending}
         />
       </div>
     </div>
