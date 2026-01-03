@@ -190,6 +190,9 @@ export const emailDrafts = pgTable('email_drafts', {
   reviewedBy: varchar('reviewed_by', { length: 255 }),
   sentAt: timestamp('sent_at'),
   sentEmailId: integer('sent_email_id').references(() => emails.id),
+  archivedAt: timestamp('archived_at'),
+  archivedBy: varchar('archived_by', { length: 255 }),
+  archiveReason: text('archive_reason'),
 });
 
 export const dealsRelations = relations(deals, ({ many }) => ({

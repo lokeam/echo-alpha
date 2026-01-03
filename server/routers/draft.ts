@@ -280,8 +280,13 @@ export const draftRouter = router({
   send: publicProcedure
     .input(z.object({
       draftId: z.number().positive(),
+      confirmed: z.boolean().optional().default(false),
     }))
     .mutation(async ({ ctx, input }) => {
+      // Safety check - require explicit confirmation
+      if (!input.confirmed) {
+        throw new Error('Email send must be explicitly confirmed');
+      }
       const { pool } = await import('../../db/index');
 
       // Get draft with related data
@@ -542,6 +547,45 @@ export const draftRouter = router({
           confidenceScore: targetVersionData.confidence,
           reasoning: targetVersionData.reasoning,
           metadata: targetVersionData.metadata,
+        })
+        .where(eq(emailDrafts.id, input.draftId))
+        .returning();
+
+      return updated;
+    }),
+
+  /**
+   * Archive a draft (soft delete with reason tracking)
+   */
+  archive: publicProcedure
+    .input(z.object({
+      draftId: z.number().positive(),
+      reason: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.query.emailDrafts.findFirst({
+        where: eq(emailDrafts.id, input.draftId),
+      });
+
+      if (!existing) {
+        throw new Error('Draft not found');
+      }
+
+      if (existing.status === 'sent') {
+        throw new Error('Cannot archive a draft that has already been sent');
+      }
+
+      if (existing.archivedAt) {
+        throw new Error('Draft is already archived');
+      }
+
+      const [updated] = await ctx.db
+        .update(emailDrafts)
+        .set({
+          status: 'archived',
+          archivedAt: new Date(),
+          archivedBy: 'current_user', // TODO: Replace with actual user from auth
+          archiveReason: input.reason || 'User archived draft',
         })
         .where(eq(emailDrafts.id, input.draftId))
         .returning();
