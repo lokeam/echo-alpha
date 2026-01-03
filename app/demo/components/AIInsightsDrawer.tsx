@@ -28,6 +28,10 @@ interface Question {
   answer: string;
   sourceEmailId?: number;
   sourceText?: string;
+  sourceEmailFrom?: string;
+  sourceEmailTo?: string;
+  sourceEmailSubject?: string;
+  sourceEmailDate?: Date | string;
 }
 
 interface DataSource {
@@ -103,7 +107,7 @@ export function AIInsightsDrawer({
       <DrawerContent className="h-full w-[50vw] max-w-[50vw]! fixed right-0 top-0 bottom-0">
         <DrawerHeader className="border-b">
           <DrawerTitle className="flex items-center gap-2 text-2xl">
-            <BulbIcon className="w-8 h-8" />
+            <BulbIcon className="w-8 h-8 text-yellow-400" />
             AI Reasoning & Data Sources
           </DrawerTitle>
           <DrawerDescription>
@@ -192,6 +196,21 @@ export function AIInsightsDrawer({
 function QuestionItem({ question }: { question: Question }) {
   const [showSource, setShowSource] = useState(false);
 
+  const formatEmailDate = (date: Date | string | undefined) => {
+    if (!date) return 'Unknown date';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return 'Unknown date';
+
+    return d.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
   return (
     <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
       <div className="flex items-start gap-2">
@@ -216,9 +235,32 @@ function QuestionItem({ question }: { question: Question }) {
           )}
 
           {showSource && question.sourceText && (
-            <div className="mt-2 p-3 bg-white border border-[#FF2727] rounded text-xs">
-              <div className="text-gray-700 italic border-l-2 border-gray-400 pl-3">
-                &ldquo;{question.sourceText.trim()}&rdquo;
+            <div className="mt-2 bg-white border border-[#FF2727] rounded overflow-hidden">
+              {/* Email Header */}
+              <div className="bg-gray-50 border-b border-gray-200 p-3 space-y-1 text-xs">
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-gray-600 min-w-[50px]">Date:</span>
+                  <span className="text-gray-900">{formatEmailDate(question.sourceEmailDate)}</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-gray-600 min-w-[50px]">From:</span>
+                  <span className="text-gray-900">{question.sourceEmailFrom || 'Unknown'}</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-gray-600 min-w-[50px]">To:</span>
+                  <span className="text-gray-900">{question.sourceEmailTo || 'Unknown'}</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-gray-600 min-w-[50px]">Subject:</span>
+                  <span className="text-gray-900">{question.sourceEmailSubject || 'No subject'}</span>
+                </div>
+              </div>
+
+              {/* Quoted Text */}
+              <div className="p-3">
+                <div className="text-gray-700 italic border-l-2 border-gray-400 pl-3 text-xs">
+                  &ldquo;{question.sourceText.trim()}&rdquo;
+                </div>
               </div>
             </div>
           )}

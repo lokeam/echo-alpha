@@ -13,6 +13,7 @@ export interface EmailDraft {
       sourceEmailSubject?: string;
       sourceEmailDate?: string;
       sourceEmailFrom?: string;
+      sourceEmailTo?: string;
     }>;
     dataUsed: Array<{
       sourceType: 'space' | 'deal' | 'email';
@@ -338,6 +339,10 @@ function analyzeEmailDraft(
     answer: string;
     sourceEmailId?: number;
     sourceText?: string;
+    sourceEmailSubject?: string;
+    sourceEmailDate?: string;
+    sourceEmailFrom?: string;
+    sourceEmailTo?: string;
   }> = [];
   const dataUsed: Array<{
     sourceType: 'space' | 'deal' | 'email';
@@ -369,18 +374,18 @@ function analyzeEmailDraft(
 
   // Map extracted questions to questionsAddressed format with full metadata
   extractedQuestions.forEach(({ question, sourceText }) => {
+    // Note: inboundEmail comes from raw SQL query, so fields are snake_case
+    const sentAt = (inboundEmail as any)?.sent_at || (inboundEmail as any)?.sentAt;
+
     questionsAddressed.push({
       question,
       answer: 'Addressed in draft',
       sourceEmailId: inboundEmailId,
       sourceText,
       sourceEmailSubject: inboundEmail?.subject,
-      sourceEmailDate: inboundEmail?.sentAt ? new Date(inboundEmail.sentAt).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }) : undefined,
+      sourceEmailDate: sentAt ? new Date(sentAt).toISOString() : undefined,
       sourceEmailFrom: inboundEmail?.from,
+      sourceEmailTo: inboundEmail?.to,
     });
   });
 
