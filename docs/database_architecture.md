@@ -373,8 +373,23 @@ CREATE TABLE email_drafts (
   model: string;           // "gpt-4o-mini"
   tokensUsed: number;
   generatedAt: Date;
+  validationTokensUsed?: number;  -- NEW: ~300 tokens for validation call
 }
 ```
+
+**JSONB Structure (`validation`):** (NEW)
+```typescript
+{
+  status: 'passed' | 'warnings' | 'failed';
+  issues: string[];        // Array of validation issues found
+  checkedAt: Date;         // When validation was performed
+}
+```
+
+**Validation Status Values:**
+- `passed` - No issues found, all facts verified
+- `warnings` - Minor issues detected (e.g., unverified amenity)
+- `failed` - Major issues detected (e.g., wrong price, hallucinated data)
 
 **JSONB Structure (`draft_versions`):**
 ```typescript
@@ -1339,9 +1354,13 @@ try {
     dealId,
     from: 'agent@tandem.space',
     to: draft.seekerEmail,
-    subject: draft.inboundSubject,
+    subject: `Re: ${draft.inboundSubject}`,
     body: draft.finalBody,
     aiGenerated: true,
+    aiMetadata: {
+      confidence: draft.confidenceScore,
+      reasoning: draft.reasoning,
+    },
   }).returning();
 
   // 2. Update draft
@@ -1646,6 +1665,7 @@ CREATE TABLE email_drafts (
   status varchar(50) DEFAULT 'pending' NOT NULL,
   reasoning jsonb,
   metadata jsonb,
+  validation jsonb,  -- NEW: Self-critique validation results
   regeneration_count integer DEFAULT 0 NOT NULL,
   last_regeneration_at timestamp,
   current_version integer DEFAULT 0 NOT NULL,

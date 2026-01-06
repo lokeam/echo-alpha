@@ -153,6 +153,12 @@ export const emailDrafts = pgTable('email_drafts', {
     model: string;
     tokensUsed: number;
     generatedAt: Date;
+    validationTokensUsed?: number;
+  }>(),
+  validation: jsonb('validation').$type<{
+    status: 'passed' | 'warnings' | 'failed';
+    issues: string[];
+    checkedAt: Date;
   }>(),
   regenerationCount: integer('regeneration_count').notNull().default(0),
   lastRegenerationAt: timestamp('last_regeneration_at'),
