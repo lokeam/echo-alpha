@@ -42,6 +42,7 @@ Services contain business logic and orchestrate multiple operations (database, e
 
 **Location:** `server/services/`
 - `emailGenerator.ts` - OpenAI integration, prompt construction, reasoning extraction
+- `draftValidator.ts` - Self-critique validation against CRM data (NEW)
 - `contextBuilder.ts` - CRM data aggregation from multiple sources
 - `emailSender.ts` - Resend integration, email formatting
 
@@ -90,6 +91,11 @@ reasoning: {
   questionsAddressed: string[],
   schedulingLogic: string[],
   needsHumanReview: string[]
+},
+validation: {  // NEW
+  status: 'passed' | 'warnings' | 'failed',
+  issues: string[],
+  checkedAt: Date
 }
 ```
 
@@ -109,11 +115,15 @@ contextBuilder aggregates: deal + spaces + email thread
     ↓
 OpenAI API call with structured prompt
     ↓
+Validate draft against CRM data (NEW)
+    ↓
+Adjust confidence score based on validation (NEW)
+    ↓
 Parse response + extract reasoning
     ↓
 Save draft with version 0 to database
     ↓
-Return to frontend with full reasoning
+Return to frontend with full reasoning + validation
     ↓
 Streaming UI reveals text character-by-character
 ```
@@ -203,6 +213,7 @@ echo-alpha/
 │   │   └── deal.ts              # Deal queries
 │   ├── services/                # Business logic
 │   │   ├── emailGenerator.ts   # OpenAI integration
+│   │   ├── draftValidator.ts   # Self-critique validation (NEW)
 │   │   ├── contextBuilder.ts   # CRM data aggregation
 │   │   └── emailSender.ts      # Resend integration
 │   └── trpc.ts                  # tRPC initialization

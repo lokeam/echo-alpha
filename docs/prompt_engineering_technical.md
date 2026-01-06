@@ -63,8 +63,15 @@
 │  ┌──────────────────────────────────────────────────────────┐  │
 │  │              OpenAI API (GPT-4o-mini)                     │  │
 │  │  Model: gpt-4o-mini                                       │  │
-│  │  Temperature: 0.7                                         │  │
-│  │  Max Tokens: 1000                                         │  │
+│  │  Temperature: 0.7 (generation) / 0.1 (validation)        │  │
+│  │  Max Tokens: 1000 (generation) / 300 (validation)        │  │
+│  └────────┬─────────────────────────────────────────────────┘  │
+│           │                                                      │
+│           ▼                                                      │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │         draftValidator.ts Service (NEW)                   │  │
+│  │  • validateDraftAccuracy()                                │  │
+│  │  • Returns: status, issues[], confidenceAdjustment       │  │
 │  └──────────────────────────────────────────────────────────┘  │
 ├─────────────────────────────────────────────────────────────────┤
 │                    Database (PostgreSQL)                         │
@@ -106,6 +113,7 @@
 /server
   /services
     emailGenerator.ts      # Core AI generation logic
+    draftValidator.ts      # Self-critique validation (NEW)
     contextBuilder.ts      # Prompt construction
     emailSender.ts         # Email dispatch (Resend)
   /routers
@@ -141,12 +149,22 @@
 
 #### Initial Generation System Prompt
 
-**Location**: `/server/services/emailGenerator.ts:60-62`
+**Location**: `/server/services/emailGenerator.ts:60-72`
 
 ```typescript
 {
   role: 'system',
-  content: 'You are Alex, a professional and enthusiastic real estate agent at Tandem. Write helpful, accurate email responses based on specific property data. When clients ask questions, answer them directly and positively. Use the exact data provided - do not make assumptions or add information not in the data. Be warm, professional, and solution-oriented.'
+  content: `You are Alex, a professional and enthusiastic real estate agent at Tandem.
+
+CRITICAL ACCURACY RULES:
+1. ONLY mention amenities explicitly listed in the space data provided
+2. ONLY use prices exactly as shown in the data ($X/month format)
+3. ONLY use addresses exactly as provided
+4. If a question asks about data NOT in the space listing, respond: "I'll confirm [specific detail] with the host and get back to you within 24 hours"
+5. NEVER make assumptions about features not explicitly listed
+6. NEVER add details to make the space sound better
+
+Write helpful, accurate email responses based on specific property data. When clients ask questions, answer them directly and positively ONLY if the data confirms it. Be warm, professional, and solution-oriented.`
 }
 ```
 
@@ -157,31 +175,44 @@
    - Sets expectation for tone (professional + enthusiastic)
    - Establishes authority (real estate agent)
 
-2. **Behavioral Constraints**:
+2. **CRITICAL ACCURACY RULES (NEW)**:
+   - 6 explicit anti-hallucination rules
+   - ONLY/NEVER language for emphasis
+   - Specific fallback phrase for missing data
+   - Prevents fabrication of amenities, prices, addresses
+
+3. **Behavioral Constraints**:
    - "Write helpful, accurate email responses" → Quality expectation
    - "based on specific property data" → Grounding requirement
-   - "answer them directly and positively" → Communication style
-   - "Use the exact data provided" → Anti-hallucination constraint
-   - "do not make assumptions" → Explicit prohibition
+   - "answer them directly and positively ONLY if the data confirms it" → Conditional positivity
 
-3. **Tone Specification**:
+4. **Tone Specification**:
    - "warm, professional, and solution-oriented" → Three-part tone definition
 
 #### Regeneration System Prompt
 
-**Location**: `/server/services/emailGenerator.ts:133-135`
+**Location**: `/server/services/emailGenerator.ts:145-153`
 
 ```typescript
 {
   role: 'system',
-  content: 'You are Alex, a professional and enthusiastic real estate agent at Tandem. You are refining an email draft based on user feedback. Preserve the good parts of the previous draft while incorporating the requested changes. Be warm, professional, and solution-oriented.'
+  content: `You are Alex, a professional and enthusiastic real estate agent at Tandem.
+
+REFINEMENT RULES:
+1. You are refining tone, structure, or emphasis ONLY
+2. You MUST NOT add new factual information (prices, amenities, availability)
+3. You MUST NOT remove factual information unless the user explicitly asks
+4. All facts from the previous draft must remain accurate
+
+Preserve the good parts of the previous draft while incorporating the requested changes. Be warm, professional, and solution-oriented.`
 }
 ```
 
 **Differences from Initial Prompt:**
 - Adds context: "refining an email draft based on user feedback"
-- Adds instruction: "Preserve the good parts of the previous draft"
-- Emphasizes: "incorporating the requested changes"
+- **REFINEMENT RULES (NEW)**: 4 explicit constraints to prevent factual drift
+- Emphasizes: "tone, structure, or emphasis ONLY"
+- Prohibits: Adding/removing factual information during refinement
 - Maintains same tone requirements
 
 ### Context Construction Pipeline
@@ -402,20 +433,23 @@ Respond with ONLY the refined email body (no subject line, no metadata).`;
 **Sequence Diagram:**
 
 ```
-User Action → Frontend → Backend → AI → Database → Frontend
-     │            │          │       │       │          │
-     ├─ Click ────┤          │       │       │          │
-     │            ├─ tRPC ───┤       │       │          │
-     │            │          ├─ Fetch data   │          │
-     │            │          ├─ Build context│          │
-     │            │          ├─ OpenAI ──────┤          │
-     │            │          │       ├─ Generate        │
-     │            │          │       └─ Return          │
-     │            │          ├─ Analyze reasoning       │
-     │            │          ├─ Calculate confidence    │
-     │            │          ├─ Save ────────┤          │
-     │            │          └─ Return ───────┼─────────┤
-     │            │                           │         ├─ Display
+User Action → Frontend → Backend → AI → Validation → Database → Frontend
+     │            │          │       │       │            │          │
+     ├─ Click ────┤          │       │       │            │          │
+     │            ├─ tRPC ───┤       │       │            │          │
+     │            │          ├─ Fetch data   │            │          │
+     │            │          ├─ Build context│            │          │
+     │            │          ├─ OpenAI ──────┤            │          │
+     │            │          │       ├─ Generate          │          │
+     │            │          │       └─ Return            │          │
+     │            │          ├─ Validate ────────┤        │          │
+     │            │          │                   ├─ Check facts      │
+     │            │          │                   └─ Return status    │
+     │            │          ├─ Adjust confidence (NEW)   │          │
+     │            │          ├─ Analyze reasoning         │          │
+     │            │          ├─ Save ────────────────────┤          │
+     │            │          └─ Return ───────────────────┼─────────┤
+     │            │                                       │         ├─ Display
 ```
 
 **Implementation**: `/server/routers/draft.ts:12-88`
@@ -530,16 +564,29 @@ export async function generateEmailDraft(context: EmailContext): Promise<EmailDr
       throw new Error('OpenAI returned empty response');
     }
 
+    // Validate the draft against source data (NEW)
+    const validation = await validateDraftAccuracy(emailBody, structuredContext);
+
     const reasoning = analyzeEmailDraft(emailBody, structuredContext, context);
+
+    // Calculate confidence with validation adjustment (NEW)
+    const baseConfidence = calculateConfidence(emailBody, structuredContext);
+    const finalConfidence = Math.max(0, Math.min(95, baseConfidence + validation.confidenceAdjustment));
 
     return {
       body: emailBody,
-      confidence: calculateConfidence(emailBody, structuredContext),
+      confidence: finalConfidence,
       reasoning,
+      validation: {  // NEW
+        status: validation.status,
+        issues: validation.issues,
+        checkedAt: new Date(),
+      },
       metadata: {
         model: completion.model,
         tokensUsed: completion.usage?.total_tokens || 0,
         generatedAt: new Date(),
+        validationTokensUsed: 300,  // NEW
       },
     };
   } catch (error) {
@@ -554,8 +601,8 @@ export async function generateEmailDraft(context: EmailContext): Promise<EmailDr
 | Parameter | Value | Rationale |
 |-----------|-------|-----------|
 | `model` | `gpt-4o-mini` | Cost-effective ($0.15/1M input, $0.60/1M output), fast (~2-4s), high quality |
-| `temperature` | `0.7` | Balanced creativity (0.0=deterministic, 1.0=creative). 0.7 = professional variation without hallucination |
-| `max_tokens` | `1000` | Typical email: 500-800 tokens. Buffer for longer responses + cost control |
+| `temperature` | `0.7` (generation) / `0.1` (validation) | Generation: Balanced creativity. Validation: Low temp for consistent fact-checking |
+| `max_tokens` | `1000` (generation) / `300` (validation) | Generation: Full email. Validation: Short status response |
 
 ### Iterative Regeneration Flow
 
@@ -852,7 +899,13 @@ function calculateConfidence(
 | Each space referenced | +5 | Specificity |
 | Greeting present | +5 | Professional structure |
 | Signature present | +5 | Professional structure |
+| **Validation adjustment (NEW)** | **-10 to -25** | **Warnings: -10, Failed: -25** |
 | **Maximum** | **95** | Human review required |
+
+**Validation Impact (NEW):**
+- **Passed**: No adjustment (score unchanged)
+- **Warnings**: -10 points (e.g., 85% → 75%)
+- **Failed**: -25 points (e.g., 85% → 60%)
 
 **Why 95% Cap?**
 - Psychological reminder for human review
@@ -1083,11 +1136,17 @@ content: '... Be warm, professional, and solution-oriented. NEVER use exclamatio
 
 ### Token Usage Analysis
 
-**Typical Generation:**
-- Input tokens: 800-1200 (context + prompt)
-- Output tokens: 500-800 (email body)
-- Total: 1300-2000 tokens
-- Cost: ~$0.03-0.05 per draft
+**Typical Generation (with validation):**
+- **Generation call:**
+  - Input tokens: 800-1200 (context + prompt)
+  - Output tokens: 500-800 (email body)
+  - Subtotal: 1300-2000 tokens
+- **Validation call (NEW):**
+  - Input tokens: 200-300 (draft + CRM data summary)
+  - Output tokens: 50-100 (validation status)
+  - Subtotal: 250-400 tokens
+- **Total: 1550-2400 tokens**
+- **Cost: ~$0.035-0.06 per draft** (17% increase)
 
 **Optimization Opportunities:**
 

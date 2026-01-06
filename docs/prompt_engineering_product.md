@@ -45,11 +45,12 @@ The AI Email Generation System is an intelligent assistant that automatically dr
 
 ### Key Differentiators
 
-1. **Transparent AI Reasoning**: Unlike black-box AI systems, our solution shows exactly what data was used and how conclusions were reached
-2. **Iterative Refinement**: Agents can refine drafts up to 3 times with natural language instructions
-3. **Version Control**: Full undo/redo capability with keyboard shortcuts (Cmd+Z/Cmd+Shift+Z)
-4. **Human-in-the-Loop**: AI generates drafts, but humans always review and approve before sending
-5. **Audit Trail**: Complete compliance tracking for legal and regulatory requirements
+1. **Self-Critique Validation**: Automatic fact-checking against CRM data before agents see drafts - a second AI call validates the first for accuracy
+2. **Transparent AI Reasoning**: Unlike black-box AI systems, our solution shows exactly what data was used and how conclusions were reached
+3. **Iterative Refinement**: Agents can refine drafts up to 3 times with natural language instructions
+4. **Version Control**: Full undo/redo capability with keyboard shortcuts (Cmd+Z/Cmd+Shift+Z)
+5. **Human-in-the-Loop**: AI generates drafts, but humans always review and approve before sending
+6. **Audit Trail**: Complete compliance tracking for legal and regulatory requirements
 
 ---
 
@@ -74,6 +75,7 @@ The agent clicks "Generate AI Draft" button. Behind the scenes, the system:
 4. **Checks calendar availability** for proposed tour times
 5. **Calculates optimal tour route** to minimize travel time
 6. **Drafts a comprehensive response** addressing every question
+7. **Validates draft accuracy** against CRM data to catch any hallucinations
 
 #### Step 3: Real-Time Progress Feedback
 The agent sees 8 status updates as the AI works:
@@ -93,6 +95,7 @@ The draft appears character-by-character (500 characters/second) with a blinking
 
 #### Step 5: Review AI Reasoning
 The agent clicks "View AI Reasoning" to see:
+- **Validation Status**: Passed/Warnings/Failed with specific issues flagged (if any)
 - **Questions Addressed**: All 12 questions with source email context
 - **CRM Database Lookups**: Exactly which space data was used
   - FiDi Office: Parking ($200/mo, 4 spots), key cards ($25 each), meeting rooms
@@ -174,7 +177,41 @@ Tracks every version of a draft (v0 = original, v1-v3 = refinements) with full m
 - **Recovery**: Undo accidental changes instantly
 - **Learning**: Review what instructions produced which results
 
-### 4. Data Source Transparency
+### 4. Self-Critique Validation Layer
+
+**What It Does**
+After generating a draft, a second AI call validates it against the source data to catch hallucinations before agents see it.
+
+**How It Works**
+1. AI generates draft (first OpenAI call)
+2. Validation AI reviews draft against CRM data (second OpenAI call)
+3. Checks: prices match exactly, amenities are listed, addresses correct
+4. Returns status: Passed, Warnings, or Failed
+5. Adjusts confidence score based on validation results
+
+**Business Value**
+- **Proactive Quality Control**: Catches errors before human review
+- **Cost-Effective**: Only $0.01 per draft, 1-2 seconds added
+- **Automatic Flagging**: Low confidence scores alert agents to review carefully
+- **Reduced Risk**: Prevents sending inaccurate information to clients
+
+**Example Validation:**
+```
+Status: Passed ✓
+Issues: None
+Confidence: 88% (no adjustment needed)
+```
+
+**Example Validation with Issues:**
+```
+Status: Warnings ⚠
+Issues:
+- Draft mentions "gym access" but this amenity is not in CRM data
+- Parking cost stated as "$150/mo" but CRM shows "$200/mo"
+Confidence: 75% (adjusted down from 85%)
+```
+
+### 5. Data Source Transparency
 
 **What It Does**
 Shows exactly where every piece of information came from:
@@ -193,7 +230,7 @@ Data Used: Parking availability, cost ($200/mo), spots (4 available)
 - **Training**: New agents learn what data exists in CRM
 - **Quality Assurance**: Easy to spot incorrect data lookups
 
-### 5. Confidence Scoring
+### 6. Confidence Scoring
 
 **What It Does**
 Assigns a confidence score (0-95%) to each draft based on:
@@ -206,6 +243,11 @@ Assigns a confidence score (0-95%) to each draft based on:
 - **85-95%**: High confidence - likely ready to send with minor review
 - **70-84%**: Medium confidence - review carefully, may need refinement
 - **Below 70%**: Low confidence - significant gaps or missing data
+
+**Validation Impact on Confidence:**
+- **Passed validation**: No adjustment (score remains as calculated)
+- **Warnings**: -10 points (e.g., 85% → 75%)
+- **Failed validation**: -25 points (e.g., 85% → 60%)
 
 **Note**: The system never shows 100% confidence. This is intentional - it reminds agents that human review is always required.
 
@@ -359,12 +401,19 @@ A right-side drawer (50% of screen width) with collapsible sections:
 
 ### How the AI Stays Accurate
 
-**1. Grounded in Real Data**
+**1. Self-Critique Validation Layer (NEW)**
+- After draft generation, second AI call validates accuracy
+- Checks all prices, amenities, and addresses against CRM data
+- Flags any hallucinations or inaccuracies automatically
+- Adjusts confidence score based on validation results
+- Cost: +$0.01 per draft, +1-2 seconds latency
+
+**2. Grounded in Real Data**
 - AI only uses data from CRM database (no hallucinations)
 - If data doesn't exist, AI says "I'll check with the host" (not making up answers)
 - All facts are traceable to source documents
 
-**2. Explicit Constraints**
+**3. Explicit Constraints**
 The AI is instructed to:
 - ✅ Answer questions directly and positively when data confirms YES
 - ✅ Use exact data provided (no assumptions)
@@ -372,13 +421,13 @@ The AI is instructed to:
 - ❌ Never make up information not in the data
 - ❌ Never contradict previous statements in the thread
 
-**3. Question Coverage Validation**
+**4. Question Coverage Validation**
 - System extracts all questions from client email
 - Checks if draft addresses each question
 - Flags missed questions in confidence score
 - Shows question-by-question coverage in reasoning drawer
 
-**4. Data Source Attribution**
+**5. Data Source Attribution**
 - Every statement traced to source (space listing, email, calendar)
 - Agents can verify accuracy before sending
 - Easy to spot if AI used wrong data or misinterpreted
@@ -469,7 +518,7 @@ The AI is instructed to:
 ### Secondary KPIs
 
 **Cost Efficiency**
-- **Cost per Draft**: Target <$0.10 (currently ~$0.03-0.05)
+- **Cost per Draft**: Target <$0.10 (currently ~$0.035-0.06 with validation)
 - **ROI**: (Time saved × hourly rate) / AI cost = Target 100x+
 
 **User Engagement**

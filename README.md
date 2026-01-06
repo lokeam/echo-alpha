@@ -1,6 +1,20 @@
 # Echo Alpha
 
-AI-powered email assistant demo for commercial real estate brokers.
+**AI-Powered Email Assistant for Commercial Real Estate**
+
+> Automatically draft professional email responses in 30 seconds instead of 45 minutes. 90x efficiency improvement with transparent AI reasoning.
+
+## What This Does
+
+Echo Alpha analyzes complex client inquiries (e.g., 12 questions about 3 office spaces), automatically searches your CRM database, checks calendar availability, and generates accurate, personalized email responses. The AI shows exactly what data it used and why, enabling human verification before sending.
+
+**Key Features:**
+- 🤖 **AI Draft Generation** - GPT-4o-mini powered responses
+- 🔍 **Transparent Reasoning** - See exactly what data the AI used
+- ✏️ **Iterative Refinement** - Refine drafts with natural language
+- 📝 **Version History** - Full undo/redo with Cmd+Z/Cmd+Shift+Z
+- ✅ **Human-in-the-Loop** - Review and approve before sending
+- 📊 **Compliance Ready** - Complete audit trail
 
 ## Tech Stack
 
@@ -75,12 +89,45 @@ make db-reset     # Nuclear option (destroys all data)
 make dev          # Just start the dev server
 ```
 
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Frontend (Next.js 14)                     │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │ Demo Page    │  │ Streaming    │  │ AI Reasoning │      │
+│  │ /demo        │  │ Draft UI     │  │ Drawer       │      │
+│  └──────┬───────┘  └──────────────┘  └──────────────┘      │
+│         │ tRPC Mutations                                     │
+│         ▼                                                    │
+├─────────────────────────────────────────────────────────────┤
+│                Backend (tRPC + Drizzle ORM)                  │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │ draft.ts Router                                       │  │
+│  │  • create()  • regenerate()  • send()  • archive()   │  │
+│  └────────┬─────────────────────────────────────────────┘  │
+│           ▼                                                  │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │ emailGenerator.ts Service                             │  │
+│  │  • generateEmailDraft()  • analyzeEmailDraft()       │  │
+│  └────────┬─────────────────────────────────────────────┘  │
+│           ▼                                                  │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │ OpenAI API (GPT-4o-mini)                             │  │
+│  │  Temperature: 0.7  |  Max Tokens: 1000               │  │
+│  └──────────────────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────┤
+│              Database (PostgreSQL via Supabase)              │
+│  email_drafts | emails | spaces | deals | deal_spaces      │
+└─────────────────────────────────────────────────────────────┘
+```
+
 ## Project Structure
 
 ```
 ├── app/                    # Next.js app router pages
-│   ├── demo/              # Demo flow pages
-│   ├── drafts/            # Email draft review pages
+│   ├── demo/              # Main demo workflow (CEO demo)
+│   ├── drafts/            # Draft review pages
 │   └── overview/          # Landing page
 ├── components/            # Reusable UI components
 ├── db/                    # Database schema and migrations
@@ -88,7 +135,11 @@ make dev          # Just start the dev server
 │   └── seed.ts            # Sample data seeder
 ├── server/                # tRPC backend
 │   ├── routers/           # API route handlers
-│   └── services/          # Business logic
+│   └── services/          # Business logic (AI, email, context)
+├── docs/                  # Technical documentation
+│   ├── prompt_engineering_technical.md
+│   └── prompt_engineering_product.md
+├── EXECUTIVE_SUMMARY.md   # Business overview for stakeholders
 └── Makefile              # Development workflow commands
 ```
 
