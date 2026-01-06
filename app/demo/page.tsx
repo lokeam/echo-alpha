@@ -43,7 +43,6 @@ export default function DemoPage() {
   const [editedBody, setEditedBody] = useState<string>('');
   const [confidence, setConfidence] = useState<number>(0);
   const [status, setStatus] = useState<'pending' | 'approved' | 'sent'>('pending');
-  const [sentAt, setSentAt] = useState<Date | null>(null);
 
   // Auto-save state
   const [isSaving, setIsSaving] = useState(false);
@@ -51,12 +50,24 @@ export default function DemoPage() {
   const [autoSaveTimer, setAutoSaveTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Version history
-  const [versions, setVersions] = useState<any[]>([]);
+  const [versions, setVersions] = useState<Array<{
+    version: number;
+    body: string;
+    prompt: string | null;
+    confidence: number;
+    createdAt: Date;
+  }>>([]);
   const [currentVersion, setCurrentVersion] = useState<number>(0);
   const [regenerationCount, setRegenerationCount] = useState<number>(0);
 
   // Reasoning data
-  const [reasoning, setReasoning] = useState<any>(null);
+  const [reasoning, setReasoning] = useState<{
+    questionsAddressed: Array<{ question: string; answer: string }>;
+    dataUsed: Array<{ sourceType: string; sourceName: string }>;
+    crmLookups?: unknown[];
+    calendarChecks?: unknown[];
+    tourRoute?: unknown;
+  } | null>(null);
 
   // UI state
   const [reasoningDrawerOpen, setReasoningDrawerOpen] = useState(false);

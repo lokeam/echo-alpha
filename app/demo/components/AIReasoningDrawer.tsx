@@ -19,6 +19,8 @@ import { BulbIcon } from '@/components/ui/icons/bulb-icon';
 import { MailOpenedIcon } from '@/components/ui/icons/mail-opened-icon';
 import { CircleCheckIcon } from '@/components/ui/icons/circle-check-icon';
 import { CheckIcon } from '@/components/ui/icons/check-icon';
+import { WarningIcon } from '@/components/ui/icons/warning-icon';
+import { CircleXIcon } from '@/components/ui/icons/circle-x-icon';
 import { XIcon } from '@/components/ui/icons/x-icon';
 
 // Utils
@@ -99,6 +101,11 @@ interface AIReasoningDrawerProps {
     driveTimes: string;
     totalTime: string;
   };
+  validation?: {
+    status: 'passed' | 'warnings' | 'failed';
+    issues: string[];
+    checkedAt: Date;
+  };
 }
 
 export function AIReasoningDrawer({
@@ -108,6 +115,7 @@ export function AIReasoningDrawer({
   crmLookups,
   calendarChecks,
   tourRoute,
+  validation,
 }: AIReasoningDrawerProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['questions']));
 
@@ -137,6 +145,55 @@ export function AIReasoningDrawer({
         </DrawerHeader>
 
         <div className="overflow-y-auto flex-1 p-6 space-y-4">
+          {/* Validation Status */}
+          {validation && (
+            <div className={cn(
+              "border rounded-lg p-4",
+              validation.status === 'passed' && "border-green-200 bg-green-50",
+              validation.status === 'warnings' && "border-yellow-200 bg-yellow-50",
+              validation.status === 'failed' && "border-red-200 bg-red-50"
+            )}>
+              <div className="flex items-center gap-2 mb-2">
+                {validation.status === 'passed' && (
+                  <>
+                    <CheckIcon className="w-5 h-5 text-green-600" />
+                    <h3 className="font-semibold text-green-900">Validation Passed</h3>
+                  </>
+                )}
+                {validation.status === 'warnings' && (
+                  <>
+                    <WarningIcon className="w-5 h-5 text-yellow-600" />
+                    <h3 className="font-semibold text-yellow-900">Validation Warnings</h3>
+                  </>
+                )}
+                {validation.status === 'failed' && (
+                  <>
+                    <CircleXIcon className="w-5 h-5 text-red-600" />
+                    <h3 className="font-semibold text-red-900">Validation Failed</h3>
+                  </>
+                )}
+              </div>
+
+              {validation.issues.length > 0 && (
+                <ul className="text-sm space-y-1 ml-7">
+                  {validation.issues.map((issue, i) => (
+                    <li key={i} className={cn(
+                      validation.status === 'passed' && "text-green-700",
+                      validation.status === 'warnings' && "text-yellow-700",
+                      validation.status === 'failed' && "text-red-700"
+                    )}>
+                      • {issue}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <p className="text-xs text-gray-600 mt-3">
+                Self-critique validation completed at {new Date(validation.checkedAt).toLocaleTimeString()}
+              </p>
+            </div>
+          )}
+
           {/* Questions Addressed */}
           <CollapsibleSection
             title="Questions Addressed"
