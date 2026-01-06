@@ -1,5 +1,6 @@
 import { openai } from '../../lib/openai';
 import { buildStructuredContext, buildEmailPrompt, EmailContext } from './contextBuilder';
+import { validateDraftAccuracy } from './draftValidator';
 
 export interface EmailDraft {
   body: string;
@@ -39,10 +40,16 @@ export interface EmailDraft {
     calendarChecks?: any[];
     tourRoute?: any;
   };
+  validation?: {
+    status: 'passed' | 'warnings' | 'failed';
+    issues: string[];
+    checkedAt: Date;
+  };
   metadata: {
     model: string;
     tokensUsed: number;
     generatedAt: Date;
+    validationTokensUsed?: number;
   };
 }
 
@@ -59,7 +66,17 @@ export async function generateEmailDraft(context: EmailContext): Promise<EmailDr
       messages: [
         {
           role: 'system',
-          content: 'You are Alex, a professional and enthusiastic real estate agent at Tandem. Write helpful, accurate email responses based on specific property data. When clients ask questions, answer them directly and positively. Use the exact data provided - do not make assumptions or add information not in the data. Be warm, professional, and solution-oriented.',
+          content: `You are Alex, a professional and enthusiastic real estate agent at Tandem.
+
+CRITICAL ACCURACY RULES:
+1. ONLY mention amenities explicitly listed in the space data provided
+2. ONLY use prices exactly as shown in the data ($X/month format)
+3. ONLY use addresses exactly as provided
+4. If a question asks about data NOT in the space listing, respond: "I'll confirm [specific detail] with the host and get back to you within 24 hours"
+5. NEVER make assumptions about features not explicitly listed
+6. NEVER add details to make the space sound better
+
+Write helpful, accurate email responses based on specific property data. When clients ask questions, answer them directly and positively ONLY if the data confirms it. Be warm, professional, and solution-oriented.`,
         },
         {
           role: 'user',
@@ -76,17 +93,30 @@ export async function generateEmailDraft(context: EmailContext): Promise<EmailDr
       throw new Error('OpenAI returned empty response');
     }
 
+    // Validate the draft against source data
+    const validation = await validateDraftAccuracy(emailBody, structuredContext);
+
     // Analyze the generated email to extract reasoning
     const reasoning = analyzeEmailDraft(emailBody, structuredContext, context);
 
+    // Calculate confidence with validation adjustment
+    const baseConfidence = calculateConfidence(emailBody, structuredContext);
+    const finalConfidence = Math.max(0, Math.min(95, baseConfidence + validation.confidenceAdjustment));
+
     return {
       body: emailBody,
-      confidence: calculateConfidence(emailBody, structuredContext),
+      confidence: finalConfidence,
       reasoning,
+      validation: {
+        status: validation.status,
+        issues: validation.issues,
+        checkedAt: new Date(),
+      },
       metadata: {
         model: completion.model,
         tokensUsed: completion.usage?.total_tokens || 0,
         generatedAt: new Date(),
+        validationTokensUsed: 300,
       },
     };
   } catch (error) {
@@ -132,7 +162,15 @@ Respond with ONLY the refined email body (no subject line, no metadata).`;
       messages: [
         {
           role: 'system',
-          content: 'You are Alex, a professional and enthusiastic real estate agent at Tandem. You are refining an email draft based on user feedback. Preserve the good parts of the previous draft while incorporating the requested changes. Be warm, professional, and solution-oriented.',
+          content: `You are Alex, a professional and enthusiastic real estate agent at Tandem.
+
+REFINEMENT RULES:
+1. You are refining tone, structure, or emphasis ONLY
+2. You MUST NOT add new factual information (prices, amenities, availability)
+3. You MUST NOT remove factual information unless the user explicitly asks
+4. All facts from the previous draft must remain accurate
+
+Preserve the good parts of the previous draft while incorporating the requested changes. Be warm, professional, and solution-oriented.`,
         },
         {
           role: 'user',

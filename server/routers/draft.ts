@@ -584,7 +584,7 @@ export const draftRouter = router({
         .set({
           status: 'archived',
           archivedAt: new Date(),
-          archivedBy: 'current_user', // TODO: Replace with actual user from auth
+          archivedBy: 'system',
           archiveReason: input.reason || 'User archived draft',
         })
         .where(eq(emailDrafts.id, input.draftId))
