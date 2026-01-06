@@ -1,24 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-
-// Next
 import Link from 'next/link';
-
-// TRPC
 import { trpc } from '@/lib/trpc';
 
 // Components
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function DraftsPage() {
   const [statusFilter, setStatusFilter] = useState<'pending' | 'approved' | 'sent' | undefined>('pending');
 
-  const { data: drafts, isLoading, error } = trpc.draft.list.useQuery({
+  const { data, isLoading, error } = trpc.draft.list.useQuery({
     status: statusFilter,
     limit: 50,
   });
@@ -34,6 +35,16 @@ export default function DraftsPage() {
     if (score >= 70) return 'border-l-yellow-500';
     return 'border-l-red-500';
   };
+
+  const drafts = data?.map((draft: {
+    id: number;
+    deal_id: number;
+    status: string;
+    confidence_score: number;
+    created_at: Date;
+    final_body: string;
+    ai_generated_body: string;
+  }) => draft);
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -82,7 +93,7 @@ export default function DraftsPage() {
 
         {drafts && drafts.length > 0 && (
           <div className="space-y-4">
-            {drafts.map((draft: any) => (
+            {drafts.map((draft) => (
               <Card key={draft.id} className={`border-l-4 ${getConfidenceColor(draft.confidence_score)} hover:shadow-lg transition-shadow`}>
                 <CardHeader>
                   <div className="flex justify-between items-start">
