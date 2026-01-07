@@ -1,12 +1,10 @@
 # Echo Alpha
 
-**AI-Powered Email Assistant for Commercial Real Estate**
+**Echo Alpha** is a full-stack demonstration _email assistant_ for [commercial real estate](https://www.investopedia.com/terms/c/commercialrealestate.asp) powered by [GPT-4o-mini](https://openai.com/index/gpt-4o-mini-advancing-cost-efficient-intelligence/) showcasing AI-driven email automation for property inquiries. 🏢 ✉️ The app analyzes complex client questions, searches CRM data, checks availability, and generates personalized responses helping real estate agents respond to multi-property inquiries in 30 seconds instead of 45 minutes.
 
-> Automatically draft professional email responses in 30 seconds instead of 45 minutes. 90x efficiency improvement with transparent AI reasoning.
-
-## What This Does
-
-Echo Alpha analyzes complex client inquiries (e.g., 12 questions about 3 office spaces), automatically searches your CRM database, checks calendar availability, and generates accurate, personalized email responses. The AI shows exactly what data it used and why, enabling human verification before sending.
+## Screenshots
+<img width="668" alt="echo_alpha_intro_page" src="https://github.com/user-attachments/assets/1c84ccbb-780c-40a0-947c-22539c2324bf" />
+<img width="668" alt="echo_alpha_refine" src="https://github.com/user-attachments/assets/25f249c7-bf75-49d8-8c22-6dff0ea476db" />
 
 **Key Features:**
 - 🤖 **AI Draft Generation** - GPT-4o-mini powered responses
