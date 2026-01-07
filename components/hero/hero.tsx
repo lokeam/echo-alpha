@@ -25,7 +25,7 @@ export const Hero = () => {
         </Button>
         <Button variant="secondary" asChild>
           <Link href="/pricing">
-            View Use Case
+            View Use Case in FAQs
           </Link>
         </Button>
       </div>
