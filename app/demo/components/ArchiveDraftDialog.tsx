@@ -79,6 +79,7 @@ export function ArchiveDraftDialog({
             variant="outline"
             onClick={handleCancel}
             disabled={isLoading}
+            className="cursor-pointer"
           >
             Cancel
           </Button>
@@ -86,6 +87,7 @@ export function ArchiveDraftDialog({
             onClick={handleConfirm}
             disabled={isLoading}
             variant="destructive"
+            className="cursor-pointer"
           >
             {isLoading ? 'Archiving...' : 'Archive Draft'}
           </Button>

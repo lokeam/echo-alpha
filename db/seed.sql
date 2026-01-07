@@ -1,4 +1,4 @@
--- Seed data for Tandem demo
+-- Seed data for AI Email Assistant demo
 
 -- Clear existing data
 DELETE FROM deal_spaces;
@@ -64,7 +64,7 @@ INSERT INTO emails (deal_id, "from", "to", subject, body, sent_at, ai_generated)
 VALUES
   (
     1,
-    'agent@tandem.space',
+    'agent@ai-email-assistant.space',
     'sarah@acme-ai.com',
     'Office Spaces for Acme AI - 3 Great Options',
     'Hi Sarah,
@@ -87,14 +87,14 @@ Would you like to schedule tours? I''m happy to coordinate with all three hosts.
 
 Best,
 Alex
-Tandem',
+AI Email Assistant',
     '2025-01-02 10:00:00',
     false
   ),
   (
     1,
     'sarah@acme-ai.com',
-    'agent@tandem.space',
+    'agent@ai-email-assistant.space',
     'Re: Office Spaces for Acme AI - 3 Great Options',
     'Hi Alex,
 

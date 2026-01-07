@@ -1352,7 +1352,7 @@ try {
   // 1. Create email record
   const [email] = await db.insert(emails).values({
     dealId,
-    from: 'agent@tandem.space',
+    from: 'agent@ai-email-assistant.space',
     to: draft.seekerEmail,
     subject: `Re: ${draft.inboundSubject}`,
     body: draft.finalBody,
@@ -1494,7 +1494,7 @@ await db.update(emailDrafts)
 // 1. Create email record
 const [email] = await db.insert(emails).values({
   dealId: draft.dealId,
-  from: 'agent@tandem.space',
+  from: 'agent@ai-email-assistant.space',
   to: draft.seekerEmail,
   subject: `Re: ${draft.inboundSubject}`,
   body: draft.finalBody,

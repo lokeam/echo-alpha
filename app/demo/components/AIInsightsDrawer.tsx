@@ -183,7 +183,7 @@ export function AIInsightsDrawer({
 
         <div className="border-t p-4">
           <DrawerClose asChild>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full cursor-pointer">
               Close
             </Button>
           </DrawerClose>
@@ -221,7 +221,7 @@ function QuestionItem({ question }: { question: Question }) {
           {question.sourceEmailId && (
             <button
               onClick={() => setShowSource(!showSource)}
-              className="mt-2 text-sm text-[#FF2727] hover:text-[#FF2727] flex items-center gap-1"
+              className="mt-2 text-sm text-[#FF2727] hover:text-[#FF2727] flex items-center gap-1 cursor-pointer"
             >
               <MailOpenedIcon className="w-5 h-5" />
               View Source Email
@@ -277,7 +277,7 @@ function DataSourceItem({ source }: { source: DataSource }) {
     <div className="border border-gray-200 rounded-lg bg-gray-50">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full p-3 text-left hover:bg-gray-100 transition-colors"
+        className="w-full p-3 text-left hover:bg-gray-100 transition-colors cursor-pointer"
       >
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-2">
@@ -401,7 +401,7 @@ function CollapsibleSection({
     <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-2">
           <ChevronIcon

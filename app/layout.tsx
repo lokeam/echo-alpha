@@ -16,7 +16,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Tandem AI Email Assistant Demo",
+  title: "AI Email Assistant Demo",
   description: "AI-powered email drafting for office leasing agents",
 };
 

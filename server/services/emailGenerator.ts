@@ -36,9 +36,9 @@ export interface EmailDraft {
       dataPointsUsed?: string[];
     }>;
     schedulingLogic?: string[];
-    crmLookups?: any[];
-    calendarChecks?: any[];
-    tourRoute?: any;
+    crmLookups?: unknown[];
+    calendarChecks?: unknown[];
+    tourRoute?: unknown;
   };
   validation?: {
     status: 'passed' | 'warnings' | 'failed';
@@ -66,7 +66,7 @@ export async function generateEmailDraft(context: EmailContext): Promise<EmailDr
       messages: [
         {
           role: 'system',
-          content: `You are Alex, a professional and enthusiastic real estate agent at Tandem.
+          content: `You are Alex, a professional and enthusiastic real estate agent at AI Email Assistant.
 
 CRITICAL ACCURACY RULES:
 1. ONLY mention amenities explicitly listed in the space data provided
@@ -128,22 +128,18 @@ Write helpful, accurate email responses based on specific property data. When cl
 /**
  * Regenerates an email draft with additional user instructions
  */
-export async function regenerateEmailDraft(
-  context: EmailContext,
-  previousDraft: string,
-  userInstruction: string,
-  versionNumber: number
-): Promise<EmailDraft> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function regenerateWithRefinement(previousDraft: string, userPrompt: string, context: EmailContext, _previousReasoning: unknown): Promise<EmailDraft> {
   const structuredContext = buildStructuredContext(context);
   const basePrompt = buildEmailPrompt(structuredContext);
 
   const regenerationPrompt = `${basePrompt}
 
-PREVIOUS DRAFT (Version ${versionNumber - 1}):
+PREVIOUS DRAFT:
 ${previousDraft}
 
 USER REFINEMENT INSTRUCTION:
-${userInstruction}
+${userPrompt}
 
 TASK:
 Regenerate the email incorporating the user's refinement instruction while:
@@ -162,7 +158,7 @@ Respond with ONLY the refined email body (no subject line, no metadata).`;
       messages: [
         {
           role: 'system',
-          content: `You are Alex, a professional and enthusiastic real estate agent at Tandem.
+          content: `You are Alex, a professional and enthusiastic real estate agent at AI Email Assistant.
 
 REFINEMENT RULES:
 1. You are refining tone, structure, or emphasis ONLY
@@ -291,11 +287,29 @@ function extractQuestionsFromEmail(
 /**
  * Builds CRM lookup data from detailedAmenities
  */
-function buildCRMLookups(spaces: any[], emailBody: string): any[] {
+interface Space {
+  id: number;
+  name: string;
+  address: string;
+  neighborhood?: string | null;
+  detailedAmenities?: {
+    parking?: { allowed?: boolean; reason?: string; [key: string]: unknown };
+    dogPolicy?: { allowed?: boolean; reason?: string; [key: string]: unknown };
+    [key: string]: unknown;
+  };
+  availability?: {
+    [key: string]: string[] | undefined;
+    tuesday?: string[];
+    wednesday?: string[];
+  };
+}
+
+function buildCRMLookups(spaces: Space[], emailBody: string): unknown[] {
   const lowerBody = emailBody.toLowerCase();
 
   return spaces.map(space => {
     const detailedAmenities = space.detailedAmenities || {};
+    const dogPolicy = detailedAmenities.dogPolicy as { allowed?: boolean; reason?: string } | undefined;
 
     return {
       spaceId: space.id,
@@ -308,9 +322,9 @@ function buildCRMLookups(spaces: any[], emailBody: string): any[] {
         meetingRooms: detailedAmenities.meetingRooms,
         rentInclusions: detailedAmenities.rentInclusions,
       },
-      excluded: detailedAmenities.dogPolicy?.allowed === false && lowerBody.includes('dog'),
-      excludedReason: detailedAmenities.dogPolicy?.allowed === false
-        ? `Dogs not allowed: ${detailedAmenities.dogPolicy.reason || 'Building policy'}`
+      excluded: dogPolicy?.allowed === false && lowerBody.includes('dog'),
+      excludedReason: dogPolicy?.allowed === false
+        ? `Dogs not allowed: ${dogPolicy.reason || 'Building policy'}`
         : undefined,
     };
   });
@@ -319,7 +333,7 @@ function buildCRMLookups(spaces: any[], emailBody: string): any[] {
 /**
  * Builds calendar availability checks
  */
-function buildCalendarChecks(spaces: any[]): any[] {
+function buildCalendarChecks(spaces: Space[]): unknown[] {
   return [
     {
       day: 'Tuesday',
@@ -349,7 +363,7 @@ function buildCalendarChecks(spaces: any[]): any[] {
 /**
  * Builds tour route optimization
  */
-function buildTourRoute(spaces: any[]): any {
+function buildTourRoute(spaces: Space[]): unknown {
   const neighborhoods = spaces.map(s => s.neighborhood).filter(Boolean);
 
   if (neighborhoods.length >= 3) {
@@ -413,7 +427,8 @@ function analyzeEmailDraft(
   // Map extracted questions to questionsAddressed format with full metadata
   extractedQuestions.forEach(({ question, sourceText }) => {
     // Note: inboundEmail comes from raw SQL query, so fields are snake_case
-    const sentAt = (inboundEmail as any)?.sent_at || (inboundEmail as any)?.sentAt;
+    const emailData = inboundEmail as { sent_at?: string; sentAt?: string } | undefined;
+    const sentAt = emailData?.sent_at || emailData?.sentAt;
 
     questionsAddressed.push({
       question,
@@ -492,10 +507,18 @@ function analyzeEmailDraft(
     let formattedDate: string;
 
     try {
+      // Handle both snake_case (from raw SQL) and camelCase
+      const emailData = inboundEmail as { sent_at?: string | Date; sentAt?: string | Date };
+      const sentAtValue = emailData.sent_at || emailData.sentAt;
+
+      if (!sentAtValue) {
+        throw new Error('No sentAt value found');
+      }
+
       // Handle both Date objects and string timestamps
-      sentAtDate = inboundEmail.sentAt instanceof Date
-        ? inboundEmail.sentAt
-        : new Date(inboundEmail.sentAt);
+      sentAtDate = sentAtValue instanceof Date
+        ? sentAtValue
+        : new Date(sentAtValue);
 
       // Check if date is valid
       if (isNaN(sentAtDate.getTime())) {
@@ -509,6 +532,7 @@ function analyzeEmailDraft(
       });
     } catch (error) {
       // Fallback to current date if parsing fails
+      console.error('Failed to parse sentAt date:', error);
       sentAtDate = new Date();
       formattedDate = 'Recently';
     }

@@ -37,7 +37,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const { data, error } = await resend.emails.send({
-        from: from || 'Alex from Tandem <onboarding@resend.dev>',
+        from: from || 'Alex from AI Email Assistant <onboarding@resend.dev>',
         to: [to],
         subject,
         html: formatEmailBody(body),

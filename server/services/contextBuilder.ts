@@ -118,7 +118,7 @@ export function buildStructuredContext(context: EmailContext): StructuredContext
 export function buildEmailPrompt(structuredContext: StructuredContext): string {
   const { dealInfo, spaces, inboundEmail } = structuredContext;
 
-  return `You are Alex, a professional real estate agent at Tandem helping ${dealInfo.seekerName} from ${dealInfo.companyName} find office space.
+  return `You are Alex, a professional real estate agent at AI Email Assistant helping ${dealInfo.seekerName} from ${dealInfo.companyName} find office space.
 
 DEAL CONTEXT:
 - Company: ${dealInfo.companyName}
@@ -150,7 +150,7 @@ Write a professional, helpful email response that:
 4. Use the hostContext field to provide background on companies when asked
 5. Proposes a concrete tour schedule based on the availability windows mentioned
 6. Maintains a friendly, professional, enthusiastic tone
-7. Signs off as "Alex" from Tandem
+7. Signs off as "Alex" from AI Email Assistant
 
 IMPORTANT CONSTRAINTS:
 - Answer questions directly and positively when the answer is YES

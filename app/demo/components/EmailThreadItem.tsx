@@ -143,7 +143,7 @@ export function EmailThreadItem({ email, senderType = 'agent', isExpanded = fals
           }}
           disabled={isLatest}
           className={cn(
-            "shrink-0 ml-2 p-1 rounded transition-colors self-start",
+            "shrink-0 ml-2 p-1 rounded transition-colors self-start cursor-pointer",
             isLatest ? "cursor-default opacity-50" : "hover:bg-gray-100"
           )}
         >

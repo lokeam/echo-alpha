@@ -99,12 +99,13 @@ export function RegenerateDraftModal({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+          <Button variant="outline" onClick={handleClose} disabled={isLoading} className="cursor-pointer">
             Cancel
           </Button>
           <Button
             onClick={handleRegenerate}
             disabled={instruction.length < 10 || instruction.length > 500 || isLoading}
+            className="cursor-pointer"
           >
             {isLoading ? (
               <span className="flex items-center gap-2">

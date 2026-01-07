@@ -35,7 +35,7 @@ npm run dev
 Visit: http://localhost:3000/demo
 
 You should see:
-- Email thread between Sarah (Acme AI) and the Tandem agent
+- Email thread between Sarah (Acme AI) and the AI Email Assistant agent
 - Confirmation that Docker → Postgres → Drizzle → tRPC → Next.js is working
 
 ## Troubleshooting

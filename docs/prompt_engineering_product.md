@@ -435,7 +435,7 @@ The AI is instructed to:
 ### Guardrails and Constraints
 
 **Tone & Brand Voice**
-- AI persona: "Alex, a professional and enthusiastic real estate agent at Tandem"
+- AI persona: "Alex, a professional and enthusiastic real estate agent at AI Email Assistant"
 - Tone: Warm, professional, solution-oriented
 - Prohibited: Overly casual, salesy, pushy, or negative language
 

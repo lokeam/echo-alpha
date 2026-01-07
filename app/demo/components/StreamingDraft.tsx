@@ -38,7 +38,9 @@ export function StreamingDraft({
 
     // Reset animation state for new text
     hasAnimated.current = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDisplayedText('');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsComplete(false);
 
     // Start animation
@@ -62,7 +64,7 @@ export function StreamingDraft({
   }, [fullText, streamingSpeed]);
 
   return (
-    <Card className="border-gray-100 bg-gradient-to-br from-white to-[#FFC9BF]">
+    <Card className="border-gray-100 bg-linear-to-br from-white to-[#FFC9BF]">
       <CardContent className="pt-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -70,7 +72,7 @@ export function StreamingDraft({
               <FilePencilIcon className="w-10 h-10" />
               Draft Email
               {!isComplete && (
-                <span className="inline-block w-2 h-4 bg-purple-600 animate-pulse"></span>
+                <span className="inline-block w-2 h-4 bg-brand animate-pulse"></span>
               )}
             </h3>
             {isComplete && onViewReasoning && (

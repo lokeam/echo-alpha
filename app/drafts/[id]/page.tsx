@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 // Next
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 // TRPC
@@ -31,11 +31,9 @@ import { ArrowIconUp } from '@/components/ui/icons/arrow-up-icon';
 export default function DraftDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const draftId = parseInt(params.id as string);
 
   const [editedBody, setEditedBody] = useState('');
-  const [hasEdits, setHasEdits] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRegenerateModal, setShowRegenerateModal] = useState(false);
@@ -55,7 +53,7 @@ export default function DraftDetailPage() {
   const updateMutation = trpc.draft.update.useMutation({
     onSuccess: () => {
       toast.success('Draft saved with your edits');
-      setHasEdits(false);
+      // hasEdits will automatically update via useMemo
     },
     onError: (error) => {
       toast.error(`Failed to save: ${error.message}`);
@@ -137,19 +135,20 @@ export default function DraftDetailPage() {
     },
   });
 
+  // Initialize editedBody when draft loads
   useEffect(() => {
-    if (draft) {
+    if (draft && !editedBody) {
       const currentBody = draft.final_body || draft.ai_generated_body;
       setEditedBody(currentBody);
     }
-  }, [draft?.final_body, draft?.ai_generated_body, draft?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft?.id]); // Only re-run when draft ID changes
 
-  useEffect(() => {
-    if (draft && editedBody !== (draft.final_body || draft.ai_generated_body)) {
-      setHasEdits(true);
-    } else {
-      setHasEdits(false);
-    }
+  // Derive hasEdits as a computed value instead of state
+  const hasEdits = useMemo(() => {
+    if (!draft) return false;
+    const originalBody = draft.final_body || draft.ai_generated_body;
+    return editedBody !== originalBody;
   }, [editedBody, draft]);
 
   const handleSave = () => {
@@ -338,7 +337,7 @@ export default function DraftDetailPage() {
 
           {/* Regenerate Button */}
           {draft.status !== 'sent' && draft.status !== 'rejected' && (
-            <Card className={cooldownHours ? "border-orange-200 bg-orange-50" : "border-purple-200 bg-purple-50"}>
+            <Card className={cooldownHours ? "border-orange-200 bg-orange-50" : "border-gray-200 bg-white"}>
               <CardContent className="pt-6">
                 {cooldownHours ? (
                   <div className="space-y-4">
@@ -354,7 +353,7 @@ export default function DraftDetailPage() {
                           <strong>Interested in more refinements per email?</strong> Upgrade to a Professional or Enterprise account for unlimited AI refinements with no cooldown periods.
                         </p>
                         <Link href="/pricing">
-                          <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                          <Button className="w-full bg-brand hover:bg-brand/90 text-white">
                             View Pricing Plans →
                           </Button>
                         </Link>
@@ -367,17 +366,17 @@ export default function DraftDetailPage() {
                 ) : (
                   <div className="flex justify-between items-center">
                     <div>
-                      <h3 className="font-semibold text-purple-900 mb-1">
+                      <h3 className="font-semibold text-gray-900 mb-1">
                         <SparklesIcon className="w-6 h-6 mr-2" /> Refine with AI
                       </h3>
-                      <p className="text-sm text-purple-700">
+                      <p className="text-sm text-gray-700">
                         Guide the AI to improve this draft with specific instructions
                       </p>
                     </div>
                     <Button
                       onClick={() => setShowRegenerateModal(true)}
                       disabled={draft.regenerationCount >= 3 || regenerateMutation.isPending}
-                      className="bg-[#FF2727] hover:bg-black"
+                      className="bg-[#FF2727] hover:bg-black cursor-pointer"
                     >
                       {(draft.regenerationCount || 0) >= 3 ? (
                         'Max Refinements Reached'
