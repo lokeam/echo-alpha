@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { router, publicProcedure } from '../trpc';
 import { emailDrafts, emails, deals } from '../../db/schema';
 import { eq } from 'drizzle-orm';
-import { generateEmailDraft, regenerateEmailDraft } from '../services/emailGenerator';
+import { generateEmailDraft, regenerateWithRefinement } from '../services/emailGenerator';
 import { sendEmail } from '../services/emailSender';
 
 export const draftRouter = router({
@@ -468,16 +468,16 @@ export const draftRouter = router({
       const currentVersionBody = existing.finalBody || existing.aiGeneratedBody;
       const nextVersionNumber = existing.regenerationCount + 1;
 
-      const newDraft = await regenerateEmailDraft(
+      const newDraft = await regenerateWithRefinement(
+        currentVersionBody,
+        input.userInstruction,
         {
           deal: dealResult,
           spaces: spacesResult.rows,
           emailThread: emailThreadResult.rows,
           inboundEmail: inboundEmailResult.rows[0],
         },
-        currentVersionBody,
-        input.userInstruction,
-        nextVersionNumber
+        existing.reasoning
       );
 
       const newVersion = {

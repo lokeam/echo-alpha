@@ -50,24 +50,72 @@ export default function DemoPage() {
   const [autoSaveTimer, setAutoSaveTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Version history
-  const [versions, setVersions] = useState<Array<{
+  interface DraftVersion {
     version: number;
     body: string;
     prompt: string | null;
     confidence: number;
+    reasoning: unknown;
+    metadata: {
+      model: string;
+      tokensUsed: number;
+      generatedAt: Date;
+    };
     createdAt: Date;
-  }>>([]);
+  }
+
+  interface DataSource {
+    sourceType: 'space' | 'deal' | 'email';
+    sourceId: number;
+    sourceName: string;
+    sourceTitle: string;
+    sourceSubtitle?: string;
+    details: {
+      address?: string;
+      monthlyRate?: number;
+      hostCompany?: string;
+      from?: string;
+      to?: string;
+      sentAt?: Date;
+      subject?: string;
+    };
+    dataPointsUsed?: string[];
+  }
+
+  interface Question {
+    question: string;
+    answer: string;
+    sourceEmailId?: number;
+    sourceText?: string;
+  }
+
+  interface Reasoning {
+    questionsAddressed: Question[];
+    dataUsed: DataSource[];
+    schedulingLogic?: string[];
+    calendarChecks?: Array<{
+      day: string;
+      time: string;
+      spaces: Array<{
+        spaceName: string;
+        available: boolean;
+        note?: string;
+      }>;
+    }>;
+    tourRoute?: {
+      recommended: string;
+      route: string;
+      driveTimes: string;
+      totalTime: string;
+    };
+  }
+
+  const [versions, setVersions] = useState<DraftVersion[]>([]);
   const [currentVersion, setCurrentVersion] = useState<number>(0);
   const [regenerationCount, setRegenerationCount] = useState<number>(0);
 
   // Reasoning data
-  const [reasoning, setReasoning] = useState<{
-    questionsAddressed: Array<{ question: string; answer: string }>;
-    dataUsed: Array<{ sourceType: string; sourceName: string }>;
-    crmLookups?: unknown[];
-    calendarChecks?: unknown[];
-    tourRoute?: unknown;
-  } | null>(null);
+  const [reasoning, setReasoning] = useState<Reasoning | null>(null);
 
   // UI state
   const [reasoningDrawerOpen, setReasoningDrawerOpen] = useState(false);
@@ -101,13 +149,13 @@ export default function DemoPage() {
       // Drizzle returns camelCase fields
       const draft = result.draft;
 
-      setVersions(draft.draftVersions || []);
+      setVersions((draft.draftVersions || []) as unknown as DraftVersion[]);
       setCurrentVersion(draft.currentVersion ?? 0);
       setRegenerationCount(draft.regenerationCount ?? 0);
       setDraftBody(draft.finalBody || '');
       setEditedBody(draft.finalBody || '');
       setConfidence(draft.confidenceScore ?? 0);
-      setReasoning(draft.reasoning);
+      setReasoning(draft.reasoning as unknown as Reasoning);
       setDemoState('editing');
       setRefineModalOpen(false);
     },
@@ -125,7 +173,7 @@ export default function DemoPage() {
       setDraftBody(result.finalBody || '');
       setEditedBody(result.finalBody || '');
       setConfidence(result.confidenceScore ?? 0);
-      setReasoning(result.reasoning);
+      setReasoning(result.reasoning as unknown as Reasoning);
     },
     onError: (error) => {
       toast.error(`Failed to switch version: ${error.message}`);
@@ -150,7 +198,6 @@ export default function DemoPage() {
     onSuccess: () => {
       toast.success('Email sent successfully!');
       setStatus('sent');
-      setSentAt(new Date());
       setDemoState('sent');
       setSendConfirmDialogOpen(false);
     },
@@ -178,8 +225,8 @@ export default function DemoPage() {
       setDraftBody(draft.aiGeneratedBody);
       setEditedBody(draft.aiGeneratedBody);
       setConfidence(draft.confidenceScore);
-      setReasoning(draft.reasoning);
-      setVersions(draft.draftVersions || []);
+      setReasoning(draft.reasoning as unknown as Reasoning);
+      setVersions((draft.draftVersions || []) as unknown as DraftVersion[]);
       setCurrentVersion(draft.currentVersion || 0);
       setRegenerationCount(draft.regenerationCount || 0);
       setDemoState('streaming');
@@ -425,7 +472,7 @@ export default function DemoPage() {
                     <Button
                       onClick={handleGenerateDraft}
                       disabled={createDraftMutation.isPending}
-                      className="font-bold w-full bg-[#FF2727] hover:bg-black transition-colors duration-200 ease-linear"
+                      className="font-bold w-full bg-[#FF2727] hover:bg-black transition-colors duration-200 ease-linear cursor-pointer"
                       size="lg"
                     >
                       <SparklesIcon className="w-6 h-6 mr-2"/> Generate AI Draft

@@ -115,8 +115,8 @@ export function EditableDraft({
               <div className="flex items-center gap-2 text-xs">
                 {isSaving ? (
                   <>
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-600"></div>
-                    <span className="text-purple-600">Saving...</span>
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-brand"></div>
+                    <span className="text-brand">Saving...</span>
                   </>
                 ) : lastSaved ? (
                   <>
@@ -135,13 +135,13 @@ export function EditableDraft({
                 <span className="text-sm text-gray-600">
                   {localBody.length} characters
                 </span>
-                <div className="flex gap-2">
+                <div className="flex gap-2 cursor-pointer">
                   {onAttachFilesClick && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={onAttachFilesClick}
-                      className="text-gray-700 hover:text-gray-900"
+                      className="text-gray-700 hover:text-gray-900 cursor-pointer"
                     >
                       <PaperClipIcon className="w-4 h-4 mr-2" />
                       Attach Files
@@ -152,7 +152,7 @@ export function EditableDraft({
                       variant="outline"
                       size="sm"
                       onClick={onArchiveClick}
-                      className="text-gray-700 hover:text-red-600 hover:border-red-300"
+                      className="cursor-pointer text-gray-700 hover:text-red-600 hover:border-red-300"
                     >
                       <TrashIcon className="w-4 h-4 mr-2" />
                       Archive

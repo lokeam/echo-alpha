@@ -4,7 +4,6 @@ import useMeasure from "react-use-measure";
 import { AnimatePresence, motion } from "motion/react";
 
 // Components
-import { SubHeading } from "@/components/subheading/subheading";
 import { PageContainer } from "@/components/layout/page-container";
 import { SectionHeading } from "@/components/section-heading/section-heading";
 import { ShimmerEyebrow } from "@/components/shimmer-eyebrow/shimmer-eyebrow";
@@ -29,7 +28,7 @@ export const FAQs = () => {
   };
 
   return (
-    <PageContainer className="border-divide flex flex-col items-center border-x pt-12">
+    <PageContainer id="faqs-section" className="border-divide flex flex-col items-center border-x pt-12">
       <ShimmerEyebrow text="FAQs" />
       <SectionHeading className="mt-4 mb-16">
         Frequently Asked Questions

@@ -26,7 +26,11 @@ export default function OverviewPage() {
       <FAQs />
       <PageDivide />
       <div className="flex justify-center py-12">
-        <Button onClick={handleContinueToDemo} size="lg">
+        <Button
+          onClick={handleContinueToDemo}
+          size="lg"
+          className="cursor-pointer"
+        >
           Continue to Demo →
         </Button>
       </div>

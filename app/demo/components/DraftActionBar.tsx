@@ -40,7 +40,7 @@ export function DraftActionBar({
       <Button
         onClick={onViewReasoning}
         variant="outline"
-        className="flex-1 min-w-[200px]"
+        className="flex-1 min-w-[200px] cursor-pointer"
       >
         <BulbIcon className="w-4 h-4 mr-2" />
         View AI Reasoning
@@ -51,7 +51,7 @@ export function DraftActionBar({
         onClick={onRefine}
         disabled={!canRefine || isSaving}
         variant="outline"
-        className="flex-1 min-w-[200px] relative"
+        className="flex-1 min-w-[200px] relative cursor-pointer"
       >
         <SparklesIcon className="w-4 h-4 mr-2" />
         Refine Draft
@@ -72,7 +72,7 @@ export function DraftActionBar({
         <Button
           onClick={onViewVersions}
           variant="outline"
-          className="flex-1 min-w-[200px]"
+          className="flex-1 min-w-[200px] cursor-pointer"
         >
           <FilesIcon className="w-4 h-4 mr-2" />
           View Versions
@@ -84,7 +84,7 @@ export function DraftActionBar({
         <Button
           onClick={onSend}
           disabled={isSaving}
-          className="flex-1 min-w-[200px] bg-[#FF2727] hover:bg-black transition-colors duration-200 ease-linear font-bold"
+          className="flex-1 min-w-[200px] bg-[#FF2727] hover:bg-black transition-colors duration-200 ease-linear font-bold cursor-pointer"
         >
           <ArrowIconUp className="w-4 h-4 mr-2" />
           Send Email

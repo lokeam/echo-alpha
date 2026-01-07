@@ -83,7 +83,7 @@ export default function PricingPage() {
               key={plan.name}
               className={`relative ${
                 plan.popular
-                  ? 'border-purple-500 border-2 shadow-lg'
+                  ? 'border-brand border-2 shadow-lg'
                   : plan.current
                   ? 'border-gray-300'
                   : 'border-gray-200'
@@ -91,7 +91,7 @@ export default function PricingPage() {
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <Badge className="bg-purple-600 text-white px-4 py-1">
+                  <Badge className="bg-brand text-white px-4 py-1">
                     Most Popular
                   </Badge>
                 </div>
@@ -114,7 +114,7 @@ export default function PricingPage() {
                 <ul className="space-y-3 mb-6">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start">
-                      <Check className="h-5 w-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
+                      <Check className="h-5 w-5 text-green-600 mr-2 shrink-0 mt-0.5" />
                       <span className="text-sm text-gray-700">{feature}</span>
                     </li>
                   ))}
@@ -138,7 +138,7 @@ export default function PricingPage() {
                 <Button
                   className={`w-full ${
                     plan.popular
-                      ? 'bg-purple-600 hover:bg-purple-700'
+                      ? 'bg-brand hover:bg-brand/90 text-white'
                       : plan.current
                       ? 'bg-gray-400 cursor-not-allowed'
                       : 'bg-gray-900 hover:bg-gray-800'
@@ -168,19 +168,19 @@ export default function PricingPage() {
           </p>
           <ul className="grid md:grid-cols-2 gap-3 text-sm text-blue-700">
             <li className="flex items-start">
-              <Check className="h-4 w-4 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
+              <Check className="h-4 w-4 text-blue-600 mr-2 shrink-0 mt-0.5" />
               Perfect your messaging without constraints
             </li>
             <li className="flex items-start">
-              <Check className="h-4 w-4 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
+              <Check className="h-4 w-4 text-blue-600 mr-2 shrink-0 mt-0.5" />
               No 24-hour cooldown periods
             </li>
             <li className="flex items-start">
-              <Check className="h-4 w-4 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
+              <Check className="h-4 w-4 text-blue-600 mr-2 shrink-0 mt-0.5" />
               Faster response times for urgent deals
             </li>
             <li className="flex items-start">
-              <Check className="h-4 w-4 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
+              <Check className="h-4 w-4 text-blue-600 mr-2 shrink-0 mt-0.5" />
               Close more deals with better communication
             </li>
           </ul>

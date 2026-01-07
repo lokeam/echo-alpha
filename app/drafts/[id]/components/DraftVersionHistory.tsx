@@ -16,7 +16,22 @@ interface DraftVersion {
   body: string;
   prompt: string | null;
   confidence: number;
-  reasoning: any;
+  reasoning: {
+    questionsAddressed: Array<{
+      question: string;
+      answer: string;
+      sourceEmailId?: number;
+      sourceText?: string;
+    }>;
+    dataUsed: Array<{
+      dataPoint: string;
+      sourceType?: 'space' | 'deal' | 'email';
+      sourceId?: number;
+      fieldPath?: string;
+      value?: unknown;
+    }>;
+    schedulingLogic?: string[];
+  };
   metadata: {
     model: string;
     tokensUsed: number;
@@ -96,6 +111,7 @@ export function DraftVersionHistory({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localCurrentVersion, versions.length]);
 
   return (
@@ -156,7 +172,7 @@ export function DraftVersionHistory({
           })}
         </div>
 
-        <div className="flex gap-2 pt-3 border-t border-purple-200">
+        <div className="flex gap-2 pt-3 border-t border-gray-200">
           <Button
             variant="outline"
             size="sm"

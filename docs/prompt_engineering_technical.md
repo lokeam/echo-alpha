@@ -1025,7 +1025,7 @@ export function StreamingDraft({
   return (
     <div className="text-sm whitespace-pre-wrap font-mono">
       {displayedText}
-      {!isComplete && <span className="inline-block w-2 h-4 bg-purple-600 animate-pulse" />}
+      {!isComplete && <span className="inline-block w-2 h-4 bg-gray-600 animate-pulse" />}
     </div>
   );
 }
