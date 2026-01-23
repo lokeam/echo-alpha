@@ -123,6 +123,8 @@ db-status:
 # Stop all services
 clean:
 	@echo "$(BLUE)Stopping all services...$(RESET)"
-	@echo "$(YELLOW)Stopping Supabase...$(RESET)"
-	@npx supabase stop > /dev/null 2>&1 || true
+	@echo "$(YELLOW)Killing any hanging Supabase processes...$(RESET)"
+	@pkill -f "supabase" > /dev/null 2>&1 || true
+	@echo "$(YELLOW)Stopping Docker containers...$(RESET)"
+	@docker stop $$(docker ps -q --filter "name=supabase_.*_echo-alpha") > /dev/null 2>&1 || true
 	@echo "$(GREEN)✓ All services stopped$(RESET)"
